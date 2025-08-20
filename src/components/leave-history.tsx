@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { calculateLeaveDays } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { Info } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 type LeaveHistoryProps = {
   requests: LeaveRequest[];
@@ -36,13 +37,17 @@ type LeaveHistoryProps = {
   leaveTypes: LeaveType[];
   currentUser: Employee | (Omit<Employee, "id"> & { id: string });
   updateRequestStatus: (requestId: string, status: LeaveRequestStatus, reason?: string) => void;
-  view: "personal" | "approvals" | "all"; // 'personal' for own requests, 'approvals' for team's
+  view: "personal" | "approvals" | "all"; 
 };
+
+type StatusFilter = LeaveRequestStatus | "All";
 
 export function LeaveHistory({ requests, employees, leaveTypes, currentUser, updateRequestStatus, view }: LeaveHistoryProps) {
     const { toast } = useToast();
     const [reason, setReason] = useState("");
     const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
+
 
     const getEmployeeName = (id: number | string) => employees.find(e => e.id === id)?.name || 'Unknown';
     const getLeaveTypeName = (id: number) => leaveTypes.find(lt => lt.id === id)?.name || 'Unknown';
@@ -66,8 +71,6 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
                  }
             }
             if (!rejectionContent && request.managerReason) {
-                // Assumption: A manager is rejecting. We don't know who exactly without more data.
-                // For now, let's find any manager. In a real app, you'd store the rejector's ID.
                 const manager = employees.find(e => e.role === 'Manager' && e.id !== request.employeeId);
                  if(manager) {
                     rejectionContent = (
@@ -113,16 +116,17 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
         )
     }
     
-    let filteredRequests: LeaveRequest[] = [];
+    let baseRequests: LeaveRequest[] = [];
     let title = "My Leave History";
     let description = "A history of all your leave requests.";
     let showEmployeeColumn = true;
     let showActionsColumn = true;
     let emptyStateMessage = "You have no leave requests.";
+    let showFilters = false;
 
     switch (view) {
         case 'personal':
-            filteredRequests = requests.filter(r => r.employeeId === currentUser.id);
+            baseRequests = requests.filter(r => r.employeeId === currentUser.id);
             showEmployeeColumn = false;
             showActionsColumn = false;
             break;
@@ -131,27 +135,31 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
                 title = "Team Leave Approvals";
                 description = "Review and act on pending leave requests from your team.";
                 const supervisedEmployeeIds = employees.filter(e => e.supervisorId === currentUser.id).map(e => e.id);
-                filteredRequests = requests.filter(r => supervisedEmployeeIds.includes(r.employeeId) && r.status === 'Pending Supervisor');
+                baseRequests = requests.filter(r => supervisedEmployeeIds.includes(r.employeeId));
                 emptyStateMessage = "No pending requests from your team.";
+                showFilters = true;
             } else if (currentUser.role === 'Manager') {
                 title = "Pending My Approval";
                 description = "Review and act on pending leave requests.";
-                filteredRequests = requests.filter(r => r.status === 'Pending Manager');
+                baseRequests = requests.filter(r => r.status === 'Pending Manager' || r.status === 'Approved' || r.status === 'Rejected');
                 emptyStateMessage = "No pending requests.";
+                showFilters = true;
             }
             break;
         case 'all':
             title = "All Leave Requests";
             description = "A history of all leave requests across the company.";
-            filteredRequests = requests;
+            baseRequests = requests;
             emptyStateMessage = "No leave requests found.";
-            showActionsColumn = false; // Admins can't approve/reject from here
+            showActionsColumn = false;
+            showFilters = true;
             break;
     }
 
-
-    // Sort by submission date, most recent first
-    filteredRequests.sort((a, b) => b.submissionDate.getTime() - a.submissionDate.getTime());
+    const filteredRequests = (statusFilter === 'All'
+        ? baseRequests
+        : baseRequests.filter(r => r.status === statusFilter)
+    ).sort((a, b) => b.submissionDate.getTime() - a.submissionDate.getTime());
 
 
     const handleApprove = (request: LeaveRequest) => {
@@ -176,9 +184,27 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+      <CardHeader className="flex-row items-center justify-between">
+        <div>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
+        </div>
+        {showFilters && (
+            <div className="w-[180px]">
+                <Select value={statusFilter} onValueChange={(value: StatusFilter) => setStatusFilter(value)}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="All">All Statuses</SelectItem>
+                        <SelectItem value="Pending Supervisor">Pending Supervisor</SelectItem>
+                        <SelectItem value="Pending Manager">Pending Manager</SelectItem>
+                        <SelectItem value="Approved">Approved</SelectItem>
+                        <SelectItem value="Rejected">Rejected</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+        )}
       </CardHeader>
       <CardContent>
         <Table>
@@ -206,7 +232,7 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
                   {showActionsColumn && 
                     <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
-                            <Button size="sm" onClick={() => handleApprove(request)} disabled={request.status === 'Approved' || request.status === 'Rejected'}>Approve</Button>
+                             <Button size="sm" onClick={() => handleApprove(request)} disabled={request.status === 'Approved' || request.status === 'Rejected' || (currentUser.role === 'Supervisor' && request.status !== 'Pending Supervisor') || (currentUser.role === 'Manager' && request.status !== 'Pending Manager') }>Approve</Button>
                             <Dialog onOpenChange={(open) => { if(!open) { setReason(""); setSelectedRequest(null); }}}>
                                 <DialogTrigger asChild>
                                     <Button size="sm" variant="destructive" onClick={() => setSelectedRequest(request)} disabled={request.status === 'Approved' || request.status === 'Rejected'}>Reject</Button>
