@@ -123,6 +123,108 @@ export default function DashboardPage() {
     }
   };
 
+  const renderTabs = () => {
+    if (!currentUser) return null;
+
+    if (currentUser.role === 'Admin') {
+      return (
+        <Tabs defaultValue="employees">
+          <div className="flex items-center">
+            <TabsList>
+              <TabsTrigger value="employees">Employee Management</TabsTrigger>
+              <TabsTrigger value="requests">Leave Requests</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="employees" className="mt-4">
+            <AdminPanel leaveRequests={leaveRequests} />
+          </TabsContent>
+          <TabsContent value="requests" className="mt-4">
+            <LeaveHistory 
+              view="all"
+              requests={leaveRequests}
+              employees={employees}
+              leaveTypes={leaveTypes}
+              currentUser={currentUser} 
+              updateRequestStatus={updateRequestStatus}
+            />
+          </TabsContent>
+        </Tabs>
+      );
+    }
+    
+    if (currentUser.role === 'Supervisor') {
+      return (
+        <Tabs defaultValue="approvals">
+          <div className="flex items-center">
+            <TabsList>
+               <TabsTrigger value="approvals">Team Approvals</TabsTrigger>
+               <TabsTrigger value="request">New Request</TabsTrigger>
+               <TabsTrigger value="history">My History</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="approvals" className="mt-4">
+             <LeaveHistory 
+                view="approvals"
+                requests={leaveRequests}
+                employees={employees}
+                leaveTypes={leaveTypes}
+                currentUser={currentUser} 
+                updateRequestStatus={updateRequestStatus}
+              />
+          </TabsContent>
+          <TabsContent value="request" className="mt-4">
+            <LeaveRequestForm 
+                leaveTypes={leaveTypes} 
+                currentUser={currentUser}
+                addLeaveRequest={addLeaveRequest}
+                leaveRequests={leaveRequests}
+              />
+          </TabsContent>
+          <TabsContent value="history" className="mt-4">
+             <LeaveHistory 
+                view="personal"
+                requests={leaveRequests}
+                employees={employees}
+                leaveTypes={leaveTypes}
+                currentUser={currentUser} 
+                updateRequestStatus={updateRequestStatus}
+              />
+          </TabsContent>
+        </Tabs>
+      );
+    }
+    
+    // For Employee and Manager
+    return (
+        <Tabs defaultValue="request">
+          <div className="flex items-center">
+            <TabsList>
+              <TabsTrigger value="request">New Request</TabsTrigger>
+              <TabsTrigger value="history">History & Approvals</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="request" className="mt-4">
+            <LeaveRequestForm 
+                leaveTypes={leaveTypes} 
+                currentUser={currentUser}
+                addLeaveRequest={addLeaveRequest}
+                leaveRequests={leaveRequests}
+              />
+          </TabsContent>
+          <TabsContent value="history" className="mt-4">
+             <LeaveHistory 
+                view={currentUser.role === 'Manager' ? 'approvals' : 'personal'}
+                requests={leaveRequests}
+                employees={employees}
+                leaveTypes={leaveTypes}
+                currentUser={currentUser} 
+                updateRequestStatus={updateRequestStatus}
+              />
+          </TabsContent>
+        </Tabs>
+    );
+  }
+
   if (authLoading || loading || !currentUser) {
     return <div className="flex h-screen w-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
@@ -131,58 +233,8 @@ export default function DashboardPage() {
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Header currentUser={currentUser} />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        {currentUser.role === 'Admin' ? 
-          (
-            <Tabs defaultValue="employees">
-              <div className="flex items-center">
-                <TabsList>
-                  <TabsTrigger value="employees">Employee Management</TabsTrigger>
-                  <TabsTrigger value="requests">Leave Requests</TabsTrigger>
-                </TabsList>
-              </div>
-              <TabsContent value="employees" className="mt-4">
-                <AdminPanel leaveRequests={leaveRequests} />
-              </TabsContent>
-              <TabsContent value="requests" className="mt-4">
-                <LeaveHistory 
-                  requests={leaveRequests}
-                  employees={employees}
-                  leaveTypes={leaveTypes}
-                  currentUser={currentUser} 
-                  updateRequestStatus={updateRequestStatus}
-                />
-              </TabsContent>
-            </Tabs>
-        ) : (
-            <Tabs defaultValue="request">
-              <div className="flex items-center">
-                <TabsList>
-                  <TabsTrigger value="request">New Request</TabsTrigger>
-                  <TabsTrigger value="history">History & Approvals</TabsTrigger>
-                </TabsList>
-              </div>
-              <TabsContent value="request" className="mt-4">
-                <LeaveRequestForm 
-                    leaveTypes={leaveTypes} 
-                    currentUser={currentUser}
-                    addLeaveRequest={addLeaveRequest}
-                    leaveRequests={leaveRequests}
-                  />
-              </TabsContent>
-              <TabsContent value="history" className="mt-4">
-                 <LeaveHistory 
-                    requests={leaveRequests}
-                    employees={employees}
-                    leaveTypes={leaveTypes}
-                    currentUser={currentUser} 
-                    updateRequestStatus={updateRequestStatus}
-                  />
-              </TabsContent>
-            </Tabs>
-        )}
+        {renderTabs()}
       </main>
     </div>
   );
 }
-
-

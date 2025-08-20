@@ -36,9 +36,10 @@ type LeaveHistoryProps = {
   leaveTypes: LeaveType[];
   currentUser: Employee | (Omit<Employee, "id"> & { id: string });
   updateRequestStatus: (requestId: string, status: LeaveRequestStatus, reason?: string) => void;
+  view: "personal" | "approvals" | "all"; // 'personal' for own requests, 'approvals' for team's
 };
 
-export function LeaveHistory({ requests, employees, leaveTypes, currentUser, updateRequestStatus }: LeaveHistoryProps) {
+export function LeaveHistory({ requests, employees, leaveTypes, currentUser, updateRequestStatus, view }: LeaveHistoryProps) {
     const { toast } = useToast();
     const [reason, setReason] = useState("");
     const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
@@ -67,7 +68,7 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
             if (!rejectionContent && request.managerReason) {
                 // Assumption: A manager is rejecting. We don't know who exactly without more data.
                 // For now, let's find any manager. In a real app, you'd store the rejector's ID.
-                const manager = employees.find(e => e.role === 'Manager');
+                const manager = employees.find(e => e.role === 'Manager' && e.id !== request.employeeId);
                  if(manager) {
                     rejectionContent = (
                         <p><strong>{manager.name} (Manager):</strong> {request.managerReason}</p>
@@ -114,20 +115,40 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
     
     let filteredRequests: LeaveRequest[] = [];
     let title = "My Leave History";
+    let description = "A history of all your leave requests.";
+    let showEmployeeColumn = true;
+    let showActionsColumn = true;
+    let emptyStateMessage = "You have no leave requests.";
 
-    if (currentUser.role === 'Employee') {
-        filteredRequests = requests.filter(r => r.employeeId === currentUser.id);
-    } else if (currentUser.role === 'Supervisor') {
-        title = "Pending My Approval";
-        const supervisedEmployeeIds = employees.filter(e => e.supervisorId === currentUser.id).map(e => e.id);
-        filteredRequests = requests.filter(r => supervisedEmployeeIds.includes(r.employeeId) && r.status === 'Pending Supervisor');
-    } else if (currentUser.role === 'Manager') {
-        title = "Pending My Approval";
-        filteredRequests = requests.filter(r => r.status === 'Pending Manager');
-    } else if (currentUser.role === 'Admin') {
-        title = "All Leave Requests";
-        filteredRequests = requests;
+    switch (view) {
+        case 'personal':
+            filteredRequests = requests.filter(r => r.employeeId === currentUser.id);
+            showEmployeeColumn = false;
+            showActionsColumn = false;
+            break;
+        case 'approvals':
+            if (currentUser.role === 'Supervisor') {
+                title = "Team Leave Approvals";
+                description = "Review and act on pending leave requests from your team.";
+                const supervisedEmployeeIds = employees.filter(e => e.supervisorId === currentUser.id).map(e => e.id);
+                filteredRequests = requests.filter(r => supervisedEmployeeIds.includes(r.employeeId) && r.status === 'Pending Supervisor');
+                emptyStateMessage = "No pending requests from your team.";
+            } else if (currentUser.role === 'Manager') {
+                title = "Pending My Approval";
+                description = "Review and act on pending leave requests.";
+                filteredRequests = requests.filter(r => r.status === 'Pending Manager');
+                emptyStateMessage = "No pending requests.";
+            }
+            break;
+        case 'all':
+            title = "All Leave Requests";
+            description = "A history of all leave requests across the company.";
+            filteredRequests = requests;
+            emptyStateMessage = "No leave requests found.";
+            showActionsColumn = false; // Admins can't approve/reject from here
+            break;
     }
+
 
     // Sort by submission date, most recent first
     filteredRequests.sort((a, b) => b.submissionDate.getTime() - a.submissionDate.getTime());
@@ -157,43 +178,38 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
     <Card>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
-        <CardDescription>
-          {currentUser.role === 'Employee'
-            ? "A history of all your leave requests."
-            : "Review and act on pending leave requests."
-          }
-        </CardDescription>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              {currentUser.role !== 'Employee' && <TableHead>Employee</TableHead>}
+              {showEmployeeColumn && <TableHead>Employee</TableHead>}
               <TableHead>Leave Type</TableHead>
               <TableHead>Dates</TableHead>
               <TableHead className="hidden sm:table-cell">Submitted</TableHead>
               <TableHead className="text-center">Days</TableHead>
               <TableHead>Status</TableHead>
-              {currentUser.role !== 'Employee' && <TableHead className="text-right">Actions</TableHead>}
+              {showActionsColumn && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredRequests.length > 0 ? (
               filteredRequests.map((request) => (
                 <TableRow key={request.id}>
-                  {currentUser.role !== 'Employee' && <TableCell>{getEmployeeName(request.employeeId)}</TableCell>}
+                  {showEmployeeColumn && <TableCell>{getEmployeeName(request.employeeId)}</TableCell>}
                   <TableCell className="flex items-center">{getLeaveTypeIcon(request.leaveTypeId)} {getLeaveTypeName(request.leaveTypeId)}</TableCell>
                   <TableCell>{format(request.startDate, 'MMM d')} - {format(request.endDate, 'MMM d, yyyy')}</TableCell>
                   <TableCell className="hidden sm:table-cell">{format(request.submissionDate, 'MMM d, yyyy')}</TableCell>
                   <TableCell className="text-center">{calculateLeaveDays(request.startDate, request.endDate)}</TableCell>
                   <TableCell>{getStatusBadge(request)}</TableCell>
-                  {currentUser.role !== 'Employee' && 
+                  {showActionsColumn && 
                     <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
-                            <Button size="sm" onClick={() => handleApprove(request)} disabled={currentUser.role === 'Admin' || request.status === 'Approved' || request.status === 'Rejected'}>Approve</Button>
+                            <Button size="sm" onClick={() => handleApprove(request)} disabled={request.status === 'Approved' || request.status === 'Rejected'}>Approve</Button>
                             <Dialog onOpenChange={(open) => { if(!open) { setReason(""); setSelectedRequest(null); }}}>
                                 <DialogTrigger asChild>
-                                    <Button size="sm" variant="destructive" onClick={() => setSelectedRequest(request)} disabled={currentUser.role === 'Admin' || request.status === 'Approved' || request.status === 'Rejected'}>Reject</Button>
+                                    <Button size="sm" variant="destructive" onClick={() => setSelectedRequest(request)} disabled={request.status === 'Approved' || request.status === 'Rejected'}>Reject</Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
@@ -213,8 +229,8 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
               ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={currentUser.role === 'Employee' ? 5 : 7} className="text-center h-24">
-                        {currentUser.role === 'Employee' ? 'You have no leave requests.' : 'No pending requests.'}
+                    <TableCell colSpan={ (showEmployeeColumn ? 1 : 0) + (showActionsColumn ? 1 : 0) + 5 } className="text-center h-24">
+                        {emptyStateMessage}
                     </TableCell>
                 </TableRow>
             )}
