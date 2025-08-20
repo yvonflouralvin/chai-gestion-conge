@@ -8,7 +8,7 @@ import { z } from "zod"
 import { format } from "date-fns"
 import { CalendarIcon, Edit, UserPlus, X, Loader2 } from "lucide-react"
 import { collection, getDocs, doc, setDoc, updateDoc } from "firebase/firestore";
-import { createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 
 import type { Employee, ContractType, EmployeeRole } from "@/types"
@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
+import { useAuth } from "@/context/auth-context"
 
 const employeeSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -39,6 +40,7 @@ const employeeSchema = z.object({
 
 export function AdminPanel() {
   const { toast } = useToast();
+  const { currentUser } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormSubmitting, setIsFormSubmitting] = useState(false);
@@ -129,12 +131,22 @@ export function AdminPanel() {
 
   const getSupervisorIdValue = (values: z.infer<typeof employeeSchema>) => {
       if (!values.supervisorId || values.supervisorId === "na") return null;
-      return parseInt(values.supervisorId, 10);
+      return values.supervisorId;
   }
 
   async function handleAddEmployee(values: z.infer<typeof employeeSchema>) {
+    if (!currentUser) return;
     setIsFormSubmitting(true);
     const tempPassword = Math.random().toString(36).slice(-8);
+
+    const adminEmail = currentUser.email;
+    const adminPassword = prompt("Please enter your password to confirm this action.");
+
+    if (!adminPassword) {
+      toast({ variant: "destructive", title: "Action Canceled", description: "Password was not provided." });
+      setIsFormSubmitting(false);
+      return;
+    }
 
     try {
       // 1. Create user in Auth
@@ -174,6 +186,17 @@ export function AdminPanel() {
           description: error.message || "Could not add employee.",
       });
     } finally {
+        // Re-authenticate the admin
+        try {
+            await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+        } catch (reauthError) {
+            console.error("Admin re-authentication failed: ", reauthError);
+            toast({
+                variant: "destructive",
+                title: "Session Warning",
+                description: "Could not re-authenticate your session. Please log out and log back in.",
+            });
+        }
         setIsFormSubmitting(false);
     }
   }
@@ -214,9 +237,9 @@ export function AdminPanel() {
     }
   }
 
-  const getSupervisorName = (supervisorId: number | null) => {
+  const getSupervisorName = (supervisorId: string | null) => {
     if (!supervisorId) return "N/A";
-    const supervisor = employees.find(e => e.id === supervisorId.toString());
+    const supervisor = employees.find(e => e.id === supervisorId);
     return supervisor?.name || "Unknown";
   };
 
@@ -269,7 +292,7 @@ export function AdminPanel() {
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{employee.title}</TableCell>
                     <TableCell className="hidden lg:table-cell">{employee.contractType}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{getSupervisorName(employee.supervisorId)}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{getSupervisorName(employee.supervisorId as string | null)}</TableCell>
                     <TableCell className="text-right">
                     <Button variant="outline" size="icon" onClick={() => handleEditClick(employee)}>
                         <Edit className="h-4 w-4" />
@@ -408,4 +431,3 @@ export function AdminPanel() {
     </Card>
   );
 }
-
