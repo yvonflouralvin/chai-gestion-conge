@@ -86,7 +86,7 @@ export default function DashboardPage() {
                 />
             </TabsContent>
             <TabsContent value="admin-panel" className="mt-4">
-              <AdminPanel />
+              <AdminPanel leaveRequests={leaveRequests} />
             </TabsContent>
           </Tabs>
         ) : (
@@ -96,6 +96,7 @@ export default function DashboardPage() {
                   leaveTypes={leaveTypes} 
                   currentUser={currentUser}
                   addLeaveRequest={addLeaveRequest}
+                  leaveRequests={leaveRequests}
                 />
               </div>
               <div className="lg:col-span-4">

@@ -11,8 +11,8 @@ import { collection, getDocs, doc, setDoc, updateDoc } from "firebase/firestore"
 import { createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 
-import type { Employee, ContractType, EmployeeRole } from "@/types"
-import { cn } from "@/lib/utils"
+import type { Employee, ContractType, EmployeeRole, LeaveRequest } from "@/types"
+import { cn, calculateLeaveDays } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 
 import { Button } from "@/components/ui/button"
@@ -38,7 +38,11 @@ const employeeSchema = z.object({
   contractEndDate: z.date().nullable(),
 });
 
-export function AdminPanel() {
+type AdminPanelProps = {
+    leaveRequests: LeaveRequest[];
+};
+
+export function AdminPanel({ leaveRequests }: AdminPanelProps) {
   const { toast } = useToast();
   const { currentUser } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -138,13 +142,7 @@ export function AdminPanel() {
     if (!currentUser) return;
     setIsFormSubmitting(true);
     const tempPassword = "Chai2025";
-
-    // We can't use the Admin SDK from the client, so we can't create a user without signing them in.
-    // The workaround is to create the user, which signs them in, and then immediately sign the admin back in.
-    // This is not ideal, but it's a common workaround for client-side admin panels.
-    // A more robust solution would be a Cloud Function.
     
-    // Store current admin credentials
     const adminUser = auth.currentUser;
     if (!adminUser) {
         toast({ variant: "destructive", title: "Authentication Error", description: "Admin user not found." });
@@ -153,11 +151,9 @@ export function AdminPanel() {
     }
 
     try {
-      // 1. Create user in Auth
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, tempPassword);
       const user = userCredential.user;
 
-      // 2. Save user details in Firestore
       await setDoc(doc(db, "users", user.uid), {
         name: values.name,
         email: values.email,
@@ -171,16 +167,9 @@ export function AdminPanel() {
         avatar: `https://placehold.co/40x40.png`
       });
 
-      // 3. Send password reset email
       await sendPasswordResetEmail(auth, values.email);
       
-      // 4. Sign the admin back in
-      if (adminUser) {
-        // This is a simplified re-authentication. For a real app, you'd want a more secure
-        // way to handle this, like storing the auth state and restoring it.
-        // For this example, we assume the initial auth state is persistent.
-         await auth.updateCurrentUser(adminUser);
-      }
+       await auth.updateCurrentUser(adminUser);
 
 
       toast({
@@ -188,7 +177,7 @@ export function AdminPanel() {
           description: `${values.name} has been added and a setup email has been sent.`,
       });
 
-      fetchEmployees(); // Refetch to show updated data
+      fetchEmployees();
       handleDialogClose();
 
     } catch (error: any) {
@@ -199,7 +188,6 @@ export function AdminPanel() {
           description: error.message || "Could not add employee.",
       });
     } finally {
-        // Ensure admin is correctly signed in
         if (auth.currentUser?.uid !== adminUser.uid) {
            await auth.updateCurrentUser(adminUser);
         }
@@ -228,7 +216,7 @@ export function AdminPanel() {
             description: `${values.name}'s information has been successfully updated.`,
         });
         
-        fetchEmployees(); // Refetch to show updated data
+        fetchEmployees();
         handleDialogClose();
 
     } catch (error) {
@@ -247,6 +235,21 @@ export function AdminPanel() {
     if (!supervisorId) return "N/A";
     const supervisor = employees.find(e => e.id === supervisorId);
     return supervisor?.name || "Unknown";
+  };
+  
+  const getAvailableLeaveDays = (employee: Employee) => {
+    const today = new Date();
+    const contractStart = new Date(employee.contractStartDate);
+    let monthsWorked = (today.getFullYear() - contractStart.getFullYear()) * 12;
+    monthsWorked -= contractStart.getMonth();
+    monthsWorked += today.getMonth();
+    const accruedLeave = monthsWorked <= 0 ? 0 : monthsWorked * 1.25;
+
+    const takenLeave = leaveRequests
+      .filter(r => r.employeeId === employee.id && r.status === 'Approved')
+      .reduce((acc, req) => acc + calculateLeaveDays(req.startDate, req.endDate), 0);
+      
+    return Math.floor(accruedLeave - takenLeave);
   };
 
   const potentialSupervisors = employees.filter(e => e.id !== editingEmployee?.id && (e.role === 'Supervisor' || e.role === 'Manager' || e.role === 'Admin'));
@@ -284,7 +287,7 @@ export function AdminPanel() {
                 <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead className="hidden md:table-cell">Title</TableHead>
-                <TableHead className="hidden lg:table-cell">Contract</TableHead>
+                <TableHead className="hidden lg:table-cell">Days Left</TableHead>
                 <TableHead className="hidden lg:table-cell">Supervisor</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -297,7 +300,7 @@ export function AdminPanel() {
                         <div className="text-sm text-muted-foreground md:hidden">{employee.title}</div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{employee.title}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{employee.contractType}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{getAvailableLeaveDays(employee)}</TableCell>
                     <TableCell className="hidden lg:table-cell">{getSupervisorName(employee.supervisorId as string | null)}</TableCell>
                     <TableCell className="text-right">
                     <Button variant="outline" size="icon" onClick={() => handleEditClick(employee)}>
@@ -437,6 +440,3 @@ export function AdminPanel() {
     </Card>
   );
 }
-
-    
-    

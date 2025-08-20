@@ -51,11 +51,13 @@ type LeaveRequestFormProps = {
   leaveTypes: LeaveType[];
   currentUser: Employee | (Omit<Employee, "id"> & { id: string });
   addLeaveRequest: (request: Omit<LeaveRequest, "id">) => void;
+  leaveRequests: LeaveRequest[];
 };
 
-export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest }: LeaveRequestFormProps) {
+export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, leaveRequests }: LeaveRequestFormProps) {
   const { toast } = useToast();
   const [leaveDays, setLeaveDays] = useState(0);
+  const [availableLeaveDays, setAvailableLeaveDays] = useState(0);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -73,6 +75,22 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest }: L
       setLeaveDays(0);
     }
   }, [startDate, endDate]);
+  
+  useEffect(() => {
+    const today = new Date();
+    const contractStart = new Date(currentUser.contractStartDate);
+    let monthsWorked = (today.getFullYear() - contractStart.getFullYear()) * 12;
+    monthsWorked -= contractStart.getMonth();
+    monthsWorked += today.getMonth();
+    const accruedLeave = monthsWorked <= 0 ? 0 : monthsWorked * 1.25;
+
+    const takenLeave = leaveRequests
+      .filter(r => r.employeeId === currentUser.id && r.status === 'Approved')
+      .reduce((acc, req) => acc + calculateLeaveDays(req.startDate, req.endDate), 0);
+      
+    setAvailableLeaveDays(Math.floor(accruedLeave - takenLeave));
+  }, [currentUser, leaveRequests]);
+
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const newRequest = {
@@ -101,6 +119,11 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest }: L
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-6">
+            <div className="rounded-md border bg-muted/50 p-3 text-center">
+                <p className="text-sm text-muted-foreground">Available Leave Days</p>
+                <p className="text-2xl font-bold">{availableLeaveDays}</p>
+            </div>
+
             <FormField
               control={form.control}
               name="leaveTypeId"
