@@ -9,7 +9,6 @@ import { Header } from "@/components/header";
 import { LeaveRequestForm } from "@/components/leave-request-form";
 import { LeaveHistory } from "@/components/leave-history";
 import { AdminPanel } from "@/components/admin-panel";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { leaveTypes } from "@/lib/data";
 import type { Employee, LeaveRequest, LeaveRequestStatus } from "@/types";
 import { useAuth } from "@/context/auth-context";
@@ -133,7 +132,16 @@ export default function DashboardPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         {currentUser.role === 'Admin' ? 
           (
-             <AdminPanel leaveRequests={leaveRequests} />
+            <div className="flex flex-col gap-4">
+              <AdminPanel leaveRequests={leaveRequests} />
+              <LeaveHistory 
+                  requests={leaveRequests}
+                  employees={employees}
+                  leaveTypes={leaveTypes}
+                  currentUser={currentUser} 
+                  updateRequestStatus={updateRequestStatus}
+                />
+            </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
               <div className="lg:col-span-3">
