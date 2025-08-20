@@ -101,13 +101,12 @@ export default function DashboardPage() {
         const requestRef = doc(db, "leave-requests", requestId);
         const updateData: any = { status };
 
-        const requestDoc = await getDoc(requestRef);
-        if(!requestDoc.exists()) return;
-        const requestData = requestDoc.data();
-
-        if (reason) {
-          if (requestData.status === 'Pending Supervisor') updateData.supervisorReason = reason;
-          if (requestData.status === 'Pending Manager') updateData.managerReason = reason;
+        if (reason && status === 'Rejected') {
+           if (currentUser.role === 'Supervisor') {
+            updateData.supervisorReason = reason;
+           } else if (currentUser.role === 'Manager') {
+            updateData.managerReason = reason;
+           }
         }
 
         await updateDoc(requestRef, updateData);

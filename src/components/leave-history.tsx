@@ -27,6 +27,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { calculateLeaveDays } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { Info } from "lucide-react";
 
 type LeaveHistoryProps = {
   requests: LeaveRequest[];
@@ -48,13 +50,35 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
         return Icon ? <Icon className="h-4 w-4 mr-2" /> : null;
     }
 
-    const getStatusBadge = (status: LeaveRequestStatus) => {
-        switch (status) {
-            case 'Approved': return <Badge variant="default" className="bg-green-500 hover:bg-green-600">Approved</Badge>;
-            case 'Rejected': return <Badge variant="destructive">Rejected</Badge>;
-            case 'Pending Supervisor': return <Badge variant="secondary" className="bg-yellow-400 text-black hover:bg-yellow-500">Pending Supervisor</Badge>;
-            case 'Pending Manager': return <Badge variant="secondary" className="bg-orange-400 text-black hover:bg-orange-500">Pending Manager</Badge>;
+    const getStatusBadge = (request: LeaveRequest) => {
+        const status = request.status;
+        const rejectionReason = request.supervisorReason || request.managerReason;
+        const badge = () => {
+             switch (status) {
+                case 'Approved': return <Badge variant="default" className="bg-green-500 hover:bg-green-600">Approved</Badge>;
+                case 'Rejected': return <Badge variant="destructive">Rejected</Badge>;
+                case 'Pending Supervisor': return <Badge variant="secondary" className="bg-yellow-400 text-black hover:bg-yellow-500">Pending Supervisor</Badge>;
+                case 'Pending Manager': return <Badge variant="secondary" className="bg-orange-400 text-black hover:bg-orange-500">Pending Manager</Badge>;
+            }
         }
+        
+        return (
+            <div className="flex items-center gap-2">
+                {badge()}
+                {status === 'Rejected' && rejectionReason && (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{rejectionReason}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                )}
+            </div>
+        )
     }
     
     let filteredRequests: LeaveRequest[] = [];
@@ -126,14 +150,14 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
                   <TableCell className="flex items-center">{getLeaveTypeIcon(request.leaveTypeId)} {getLeaveTypeName(request.leaveTypeId)}</TableCell>
                   <TableCell>{format(request.startDate, 'MMM d')} - {format(request.endDate, 'MMM d, yyyy')}</TableCell>
                   <TableCell className="text-center">{calculateLeaveDays(request.startDate, request.endDate)}</TableCell>
-                  <TableCell>{getStatusBadge(request.status)}</TableCell>
+                  <TableCell>{getStatusBadge(request)}</TableCell>
                   {currentUser.role !== 'Employee' && 
                     <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
-                            <Button size="sm" onClick={() => handleApprove(request)} disabled={currentUser.role === 'Admin'}>Approve</Button>
+                            <Button size="sm" onClick={() => handleApprove(request)} disabled={currentUser.role === 'Admin' || request.status === 'Approved' || request.status === 'Rejected'}>Approve</Button>
                             <Dialog onOpenChange={(open) => { if(!open) { setReason(""); setSelectedRequest(null); }}}>
                                 <DialogTrigger asChild>
-                                    <Button size="sm" variant="destructive" onClick={() => setSelectedRequest(request)} disabled={currentUser.role === 'Admin'}>Reject</Button>
+                                    <Button size="sm" variant="destructive" onClick={() => setSelectedRequest(request)} disabled={currentUser.role === 'Admin' || request.status === 'Approved' || request.status === 'Rejected'}>Reject</Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
