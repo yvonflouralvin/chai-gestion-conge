@@ -66,11 +66,12 @@ export default function DashboardPage() {
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <Header users={employees} currentUser={currentUser} setCurrentUser={handleSetCurrentUser} />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        {currentUser.role === 'Manager' ? (
+        {currentUser.role === 'Manager' ? 
+          (
           <Tabs defaultValue="leave-management" className="w-full">
             <div className="flex items-center">
                 <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
-                    <TabsTrigger value="leave-management">Leave Management</TabsTrigger>
+                    <TabsTrigger value="leave-management">Gestion de congé</TabsTrigger>
                     <TabsTrigger value="admin-panel">Admin Panel</TabsTrigger>
                 </TabsList>
             </div>
