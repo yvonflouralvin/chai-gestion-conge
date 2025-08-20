@@ -154,28 +154,35 @@ export default function DashboardPage() {
               </TabsContent>
             </Tabs>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-              <div className="lg:col-span-3">
+            <Tabs defaultValue="request">
+              <div className="flex items-center">
+                <TabsList>
+                  <TabsTrigger value="request">New Request</TabsTrigger>
+                  <TabsTrigger value="history">History & Approvals</TabsTrigger>
+                </TabsList>
+              </div>
+              <TabsContent value="request" className="mt-4">
                 <LeaveRequestForm 
-                  leaveTypes={leaveTypes} 
-                  currentUser={currentUser}
-                  addLeaveRequest={addLeaveRequest}
-                  leaveRequests={leaveRequests}
-                />
-              </div>
-              <div className="lg:col-span-4">
-                <LeaveHistory 
-                  requests={leaveRequests}
-                  employees={employees}
-                  leaveTypes={leaveTypes}
-                  currentUser={currentUser} 
-                  updateRequestStatus={updateRequestStatus}
-                />
-              </div>
-          </div>
+                    leaveTypes={leaveTypes} 
+                    currentUser={currentUser}
+                    addLeaveRequest={addLeaveRequest}
+                    leaveRequests={leaveRequests}
+                  />
+              </TabsContent>
+              <TabsContent value="history" className="mt-4">
+                 <LeaveHistory 
+                    requests={leaveRequests}
+                    employees={employees}
+                    leaveTypes={leaveTypes}
+                    currentUser={currentUser} 
+                    updateRequestStatus={updateRequestStatus}
+                  />
+              </TabsContent>
+            </Tabs>
         )}
       </main>
     </div>
   );
 }
+
 
