@@ -61,7 +61,7 @@ export default function DashboardPage() {
           status: data.status as LeaveRequestStatus,
           supervisorReason: data.supervisorReason,
           managerReason: data.managerReason,
-          submissionDate: data.submissionDate.toDate(),
+          submissionDate: data.submissionDate ? data.submissionDate.toDate() : data.startDate.toDate(),
         };
       });
       setLeaveRequests(requestsData);
@@ -133,26 +133,7 @@ export default function DashboardPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         {currentUser.role === 'Admin' ? 
           (
-          <Tabs defaultValue="leave-management" className="w-full">
-            <div className="flex items-center">
-                <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
-                    <TabsTrigger value="leave-management">Gestion de congé</TabsTrigger>
-                    <TabsTrigger value="admin-panel">Admin Panel</TabsTrigger>
-                </TabsList>
-            </div>
-            <TabsContent value="leave-management" className="mt-4">
-               <LeaveHistory 
-                  requests={leaveRequests}
-                  employees={employees}
-                  leaveTypes={leaveTypes}
-                  currentUser={currentUser} 
-                  updateRequestStatus={updateRequestStatus}
-                />
-            </TabsContent>
-            <TabsContent value="admin-panel" className="mt-4">
-              <AdminPanel leaveRequests={leaveRequests} />
-            </TabsContent>
-          </Tabs>
+             <AdminPanel leaveRequests={leaveRequests} />
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
               <div className="lg:col-span-3">
