@@ -32,7 +32,7 @@ type LeaveHistoryProps = {
   requests: LeaveRequest[];
   employees: Employee[];
   leaveTypes: LeaveType[];
-  currentUser: Employee;
+  currentUser: Employee | (Omit<Employee, "id"> & { id: string });
   updateRequestStatus: (requestId: number, status: LeaveRequestStatus, reason?: string) => void;
 };
 
@@ -41,7 +41,7 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
     const [reason, setReason] = useState("");
     const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
 
-    const getEmployeeName = (id: number) => employees.find(e => e.id === id)?.name || 'Unknown';
+    const getEmployeeName = (id: number | string) => employees.find(e => e.id === id)?.name || 'Unknown';
     const getLeaveTypeName = (id: number) => leaveTypes.find(lt => lt.id === id)?.name || 'Unknown';
     const getLeaveTypeIcon = (id: number) => {
         const Icon = leaveTypes.find(lt => lt.id === id)?.icon;

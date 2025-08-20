@@ -5,8 +5,9 @@ export type EmployeeRole = "Employee" | "Supervisor" | "Manager";
 export type ContractType = "Full-time" | "Part-time" | "Contract";
 
 export type Employee = {
-  id: number;
+  id: number | string;
   name: string;
+  email: string;
   title: string;
   team: string;
   avatar: string;
@@ -19,7 +20,7 @@ export type Employee = {
 
 export type LeaveType = {
   id: number;
-  name: string;
+  name:string;
   icon: LucideIcon;
 };
 
@@ -31,7 +32,7 @@ export type LeaveRequestStatus =
 
 export type LeaveRequest = {
   id: number;
-  employeeId: number;
+  employeeId: number | string;
   leaveTypeId: number;
   startDate: Date;
   endDate: Date;

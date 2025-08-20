@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from 'next/navigation';
 import { Header } from "@/components/header";
 import { LeaveRequestForm } from "@/components/leave-request-form";
 import { LeaveHistory } from "@/components/leave-history";
@@ -9,13 +10,23 @@ import { AdminPanel } from "@/components/admin-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { initialEmployees, leaveTypes, initialLeaveRequests } from "@/lib/data";
 import type { Employee, LeaveRequest, LeaveRequestStatus } from "@/types";
+import { useAuth } from "@/context/auth-context";
 
 export default function DashboardPage() {
+  const { currentUser, loading } = useAuth();
+  const router = useRouter();
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
   
-  // Set initial user based on the state-managed employees array
-  const [currentUser, setCurrentUser] = useState<Employee>(() => employees.find(e => e.id === 1) || employees[0]);
+  useEffect(() => {
+    if (!loading && !currentUser) {
+      router.push('/auth/signin');
+    }
+  }, [currentUser, loading, router]);
+  
+  if (loading || !currentUser) {
+    return null; // Or a loading spinner
+  }
 
   const addLeaveRequest = (newRequestData: Omit<LeaveRequest, "id">) => {
     setLeaveRequests(prev => [
@@ -30,12 +41,7 @@ export default function DashboardPage() {
   const handleUpdateEmployee = (updatedEmployee: Employee) => {
     const newEmployees = employees.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp);
     setEmployees(newEmployees);
-
-    if (currentUser.id === updatedEmployee.id) {
-        setCurrentUser(updatedEmployee);
-    }
   };
-
 
   const updateRequestStatus = (
     requestId: number,
@@ -57,14 +63,9 @@ export default function DashboardPage() {
     );
   };
   
-  const handleSetCurrentUser = (user: Employee) => {
-    const latestUserData = employees.find(e => e.id === user.id) || user;
-    setCurrentUser(latestUserData);
-  }
-
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">
-      <Header users={employees} currentUser={currentUser} setCurrentUser={handleSetCurrentUser} />
+      <Header currentUser={currentUser} />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         {currentUser.role === 'Manager' ? 
           (

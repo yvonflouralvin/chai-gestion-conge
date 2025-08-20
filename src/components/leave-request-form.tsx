@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -52,7 +53,7 @@ const formSchema = z.object({
 
 type LeaveRequestFormProps = {
   leaveTypes: LeaveType[];
-  currentUser: Employee;
+  currentUser: Employee | (Omit<Employee, "id"> & { id: string });
   addLeaveRequest: (request: Omit<LeaveRequest, "id">) => void;
 };
 

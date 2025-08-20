@@ -1,26 +1,44 @@
+
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import type { Employee } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 
 type UserNavProps = {
-  users: Employee[];
-  currentUser: Employee;
-  setCurrentUser: (user: Employee) => void;
+  currentUser: Employee | (Omit<Employee, "id"> & { id: string });
 };
 
-export function UserNav({ users, currentUser, setCurrentUser }: UserNavProps) {
+export function UserNav({ currentUser }: UserNavProps) {
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      router.push("/auth/signin");
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Sign-out Failed",
+        description: "An error occurred while signing out. Please try again.",
+      });
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -38,20 +56,14 @@ export function UserNav({ users, currentUser, setCurrentUser }: UserNavProps) {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{currentUser.name}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {currentUser.title}
+              {currentUser.email}
             </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuLabel className="text-xs text-muted-foreground">Switch User</DropdownMenuLabel>
-          {users.map((user) => (
-            <DropdownMenuItem key={user.id} onClick={() => setCurrentUser(user)}>
-              {user.name}
-              <span className="text-xs text-muted-foreground ml-auto">{user.role}</span>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuGroup>
+        <DropdownMenuItem onClick={handleSignOut}>
+          Log out
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
