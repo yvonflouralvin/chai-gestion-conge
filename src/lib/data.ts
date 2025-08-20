@@ -82,7 +82,6 @@ export const initialLeaveRequests: LeaveRequest[] = [
     status: "Approved",
     supervisorReason: "Enjoy your vacation!",
     managerReason: "Approved.",
-    approver: "Bob Williams",
   },
   {
     id: 2,
@@ -93,7 +92,6 @@ export const initialLeaveRequests: LeaveRequest[] = [
     status: "Pending Manager",
     supervisorReason: "Approved, feel better soon.",
     managerReason: "",
-    approver: "Bob Williams",
   },
   {
     id: 3,
@@ -104,7 +102,6 @@ export const initialLeaveRequests: LeaveRequest[] = [
     status: "Pending Supervisor",
     supervisorReason: "",
     managerReason: "",
-    approver: "Bob Williams",
   },
   {
     id: 4,
@@ -115,6 +112,5 @@ export const initialLeaveRequests: LeaveRequest[] = [
     status: "Rejected",
     supervisorReason: "Project deadline conflict. Please reschedule.",
     managerReason: "",
-    approver: "Bob Williams",
   },
 ];

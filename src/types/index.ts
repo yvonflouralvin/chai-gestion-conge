@@ -38,5 +38,4 @@ export type LeaveRequest = {
   status: LeaveRequestStatus;
   supervisorReason: string;
   managerReason: string;
-  approver?: string;
 };

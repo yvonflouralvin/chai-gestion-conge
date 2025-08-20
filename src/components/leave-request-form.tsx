@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Loader2, Wand2 } from "lucide-react";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { cn, calculateLeaveDays } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -21,13 +21,11 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -41,14 +39,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { suggestApprovers } from "@/ai/flows/suggest-approvers";
 import type { Employee, LeaveRequest, LeaveType } from "@/types";
 
 const formSchema = z.object({
   leaveTypeId: z.string().min(1, { message: "Please select a leave type." }),
   startDate: z.date({ required_error: "A start date is required." }),
   endDate: z.date({ required_error: "An end date is required." }),
-  approver: z.string().min(3, { message: "Approver name is required." }),
 });
 
 type LeaveRequestFormProps = {
@@ -60,18 +56,12 @@ type LeaveRequestFormProps = {
 export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest }: LeaveRequestFormProps) {
   const { toast } = useToast();
   const [leaveDays, setLeaveDays] = useState(0);
-  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
-  const [isSuggesting, setIsSuggesting] = useState(false);
-  const [approverRole, setApproverRole] = useState("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      approver: "",
-    }
   });
 
-  const { watch, setValue } = form;
+  const { watch } = form;
   const startDate = watch("startDate");
   const endDate = watch("endDate");
 
@@ -84,36 +74,6 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest }: L
     }
   }, [startDate, endDate]);
 
-  const handleSuggestApprovers = async () => {
-    if (!approverRole) {
-      toast({
-        variant: "destructive",
-        title: "Missing Information",
-        description: "Please enter a role title to get suggestions.",
-      });
-      return;
-    }
-    setIsSuggesting(true);
-    setAiSuggestions([]);
-    try {
-      const result = await suggestApprovers({
-        roleTitle: approverRole,
-        employeeTitle: currentUser.title,
-        teamMembership: currentUser.team,
-      });
-      setAiSuggestions(result.suggestedApprovers);
-    } catch (error) {
-      console.error("AI suggestion failed:", error);
-      toast({
-        variant: "destructive",
-        title: "AI Suggestion Failed",
-        description: "Could not get suggestions. Please try again.",
-      });
-    } finally {
-      setIsSuggesting(false);
-    }
-  };
-
   function onSubmit(values: z.infer<typeof formSchema>) {
     const newRequest = {
       employeeId: currentUser.id,
@@ -123,7 +83,6 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest }: L
       status: "Pending Supervisor" as const,
       supervisorReason: "",
       managerReason: "",
-      approver: values.approver,
     };
     addLeaveRequest(newRequest);
     toast({
@@ -131,8 +90,6 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest }: L
       description: "Your leave request has been submitted for approval.",
     });
     form.reset();
-    setAiSuggestions([]);
-    setApproverRole("");
   }
 
   return (
@@ -256,53 +213,6 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest }: L
               <p className="text-sm text-muted-foreground">Total Leave Days</p>
               <p className="text-2xl font-bold">{leaveDays}</p>
             </div>
-             <div className="space-y-2">
-               <FormLabel>Approver Suggestion</FormLabel>
-                <FormDescription>
-                  Enter a role (e.g., "my boss") and let AI suggest an approver.
-                </FormDescription>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="e.g. Engineering Manager"
-                  value={approverRole}
-                  onChange={(e) => setApproverRole(e.target.value)}
-                />
-                <Button type="button" variant="outline" onClick={handleSuggestApprovers} disabled={isSuggesting}>
-                  {isSuggesting ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4" />}
-                   <span className="sr-only md:not-sr-only md:ml-2">Suggest</span>
-                </Button>
-              </div>
-            </div>
-
-            {aiSuggestions.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {aiSuggestions.map((name, index) => (
-                  <Button
-                    key={index}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setValue("approver", name, { shouldValidate: true })}
-                  >
-                    {name}
-                  </Button>
-                ))}
-              </div>
-            )}
-            
-            <FormField
-              control={form.control}
-              name="approver"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Approver Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter approver's full name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full">Submit Request</Button>
