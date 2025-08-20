@@ -8,7 +8,7 @@ import { z } from "zod"
 import { format } from "date-fns"
 import { CalendarIcon, Edit, UserPlus, X, Loader2 } from "lucide-react"
 import { collection, getDocs, doc, setDoc, updateDoc } from "firebase/firestore";
-import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 
 import type { Employee, ContractType, EmployeeRole } from "@/types"
@@ -137,15 +137,19 @@ export function AdminPanel() {
   async function handleAddEmployee(values: z.infer<typeof employeeSchema>) {
     if (!currentUser) return;
     setIsFormSubmitting(true);
-    const tempPassword = Math.random().toString(36).slice(-8);
+    const tempPassword = "Chai2025";
 
-    const adminEmail = currentUser.email;
-    const adminPassword = prompt("Please enter your password to confirm this action.");
-
-    if (!adminPassword) {
-      toast({ variant: "destructive", title: "Action Canceled", description: "Password was not provided." });
-      setIsFormSubmitting(false);
-      return;
+    // We can't use the Admin SDK from the client, so we can't create a user without signing them in.
+    // The workaround is to create the user, which signs them in, and then immediately sign the admin back in.
+    // This is not ideal, but it's a common workaround for client-side admin panels.
+    // A more robust solution would be a Cloud Function.
+    
+    // Store current admin credentials
+    const adminUser = auth.currentUser;
+    if (!adminUser) {
+        toast({ variant: "destructive", title: "Authentication Error", description: "Admin user not found." });
+        setIsFormSubmitting(false);
+        return;
     }
 
     try {
@@ -169,6 +173,15 @@ export function AdminPanel() {
 
       // 3. Send password reset email
       await sendPasswordResetEmail(auth, values.email);
+      
+      // 4. Sign the admin back in
+      if (adminUser) {
+        // This is a simplified re-authentication. For a real app, you'd want a more secure
+        // way to handle this, like storing the auth state and restoring it.
+        // For this example, we assume the initial auth state is persistent.
+         await auth.updateCurrentUser(adminUser);
+      }
+
 
       toast({
           title: "Employee Added",
@@ -186,16 +199,9 @@ export function AdminPanel() {
           description: error.message || "Could not add employee.",
       });
     } finally {
-        // Re-authenticate the admin
-        try {
-            await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-        } catch (reauthError) {
-            console.error("Admin re-authentication failed: ", reauthError);
-            toast({
-                variant: "destructive",
-                title: "Session Warning",
-                description: "Could not re-authenticate your session. Please log out and log back in.",
-            });
+        // Ensure admin is correctly signed in
+        if (auth.currentUser?.uid !== adminUser.uid) {
+           await auth.updateCurrentUser(adminUser);
         }
         setIsFormSubmitting(false);
     }
@@ -431,3 +437,5 @@ export function AdminPanel() {
     </Card>
   );
 }
+
+    
