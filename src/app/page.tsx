@@ -15,6 +15,7 @@ import { useAuth } from "@/context/auth-context";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { sendLeaveRequestSubmittedEmail, sendLeaveRequestUpdatedEmail } from "@/lib/email";
 
 export default function DashboardPage() {
   const { currentUser, loading: authLoading } = useAuth();
@@ -82,10 +83,24 @@ export default function DashboardPage() {
   }, [currentUser, authLoading, router]);
 
   const addLeaveRequest = async (newRequestData: Omit<LeaveRequest, "id">) => {
+    if (!currentUser) return;
     try {
         const docRef = await addDoc(collection(db, "leave-requests"), newRequestData);
-        setLeaveRequests(prev => [...prev, { id: docRef.id, ...newRequestData }]);
+        const newRequest = { id: docRef.id, ...newRequestData };
+        setLeaveRequests(prev => [...prev, newRequest]);
         toast({ title: "Request Submitted", description: "Your leave request has been submitted for approval." });
+
+        // Email notification logic
+        const supervisor = employees.find(e => e.id === currentUser.supervisorId);
+        if (supervisor) {
+            sendLeaveRequestSubmittedEmail({
+                request: newRequest,
+                employee: currentUser,
+                supervisor: supervisor,
+                leaveTypes: leaveTypes,
+            });
+        }
+
     } catch (error) {
         console.error("Error adding leave request: ", error);
         toast({ variant: "destructive", title: "Submission Failed", description: "Could not submit your leave request." });
@@ -100,22 +115,49 @@ export default function DashboardPage() {
     if (!currentUser) return;
     try {
         const requestRef = doc(db, "leave-requests", requestId);
-        const updateData: any = { status };
+        const requestToUpdate = leaveRequests.find(r => r.id === requestId);
+        if (!requestToUpdate) return;
 
-        if (reason && status === 'Rejected') {
+        const updateData: any = { status };
+        let finalReason = reason;
+
+        if (reason) {
            if (currentUser.role === 'Supervisor') {
             updateData.supervisorReason = reason;
            } else if (currentUser.role === 'Manager') {
             updateData.managerReason = reason;
            }
+        } else {
+            // Ensure reason is reset if status changes back from Rejected
+            if (currentUser.role === 'Supervisor') updateData.supervisorReason = "";
+            if (currentUser.role === 'Manager') updateData.managerReason = "";
         }
+
 
         await updateDoc(requestRef, updateData);
         
+        const updatedRequest = { ...requestToUpdate, ...updateData };
         setLeaveRequests(prev =>
-            prev.map(req => req.id === requestId ? { ...req, ...updateData } : req)
+            prev.map(req => req.id === requestId ? updatedRequest : req)
         );
         toast({ title: "Request Updated", description: "The leave request status has been updated." });
+
+        // Email notification logic
+        const employee = employees.find(e => e.id === updatedRequest.employeeId);
+        if (!employee) return;
+
+        const supervisor = employees.find(e => e.id === employee.supervisorId);
+        const manager = employees.find(e => e.role === 'Manager'); // Simplified: assumes one manager
+
+        sendLeaveRequestUpdatedEmail({
+            request: updatedRequest,
+            employee: employee,
+            actor: currentUser,
+            supervisor: supervisor,
+            manager: manager,
+            leaveTypes: leaveTypes,
+        })
+
 
     } catch (error) {
         console.error("Error updating request status: ", error);
@@ -238,3 +280,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
