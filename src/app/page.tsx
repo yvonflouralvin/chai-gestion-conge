@@ -97,10 +97,7 @@ export default function DashboardPage() {
               </div>
             </TabsContent>
             <TabsContent value="admin-panel" className="mt-4">
-              <AdminPanel 
-                employees={employees} 
-                onUpdateEmployee={handleUpdateEmployee} 
-              />
+              <AdminPanel />
             </TabsContent>
           </Tabs>
         ) : (

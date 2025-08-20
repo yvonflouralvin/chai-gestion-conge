@@ -6,7 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { format } from "date-fns"
-import { CalendarIcon, Edit, UserPlus, X } from "lucide-react"
+import { CalendarIcon, Edit, UserPlus, X, Loader2 } from "lucide-react"
+import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 import type { Employee, ContractType, EmployeeRole } from "@/types"
 import { cn } from "@/lib/utils"
@@ -33,19 +35,52 @@ const employeeSchema = z.object({
   contractEndDate: z.date().nullable(),
 });
 
-type AdminPanelProps = {
-  employees: Employee[];
-  onUpdateEmployee: (employee: Employee) => void;
-};
-
-export function AdminPanel({ employees, onUpdateEmployee }: AdminPanelProps) {
+export function AdminPanel() {
   const { toast } = useToast();
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
   const form = useForm<z.infer<typeof employeeSchema>>({
     resolver: zodResolver(employeeSchema),
   });
+
+  const fetchEmployees = async () => {
+    setLoading(true);
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const usersData: Employee[] = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name,
+          email: data.email,
+          title: data.title,
+          team: data.team,
+          avatar: data.avatar || `https://placehold.co/40x40.png`,
+          supervisorId: data.supervisorId,
+          role: data.role as EmployeeRole,
+          contractType: data.contractType as ContractType,
+          contractStartDate: data.contractStartDate.toDate(),
+          contractEndDate: data.contractEndDate ? data.contractEndDate.toDate() : null,
+        };
+      });
+      setEmployees(usersData);
+    } catch (error) {
+      console.error("Error fetching employees: ", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch employees from Firestore.",
+      });
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
 
   useEffect(() => {
     if (editingEmployee) {
@@ -83,30 +118,61 @@ export function AdminPanel({ employees, onUpdateEmployee }: AdminPanelProps) {
     setIsEditDialogOpen(false);
   }
 
-  function onSubmit(values: z.infer<typeof employeeSchema>) {
+  async function onSubmit(values: z.infer<typeof employeeSchema>) {
     if (!editingEmployee) return;
 
-    const updatedEmployee: Employee = {
-      ...editingEmployee,
-      ...values,
-      supervisorId: values.supervisorId ? parseInt(values.supervisorId, 10) : null,
-      role: values.role as EmployeeRole,
-      contractType: values.contractType as ContractType,
-    };
-    onUpdateEmployee(updatedEmployee);
-    toast({
-      title: "Employee Updated",
-      description: `${values.name}'s information has been successfully updated.`,
-    });
-    handleDialogClose();
+    try {
+        const employeeRef = doc(db, "users", editingEmployee.id.toString());
+        await updateDoc(employeeRef, {
+            name: values.name,
+            title: values.title,
+            team: values.team,
+            role: values.role,
+            contractType: values.contractType,
+            supervisorId: values.supervisorId ? parseInt(values.supervisorId) : null,
+            contractStartDate: values.contractStartDate,
+            contractEndDate: values.contractEndDate,
+        });
+
+        toast({
+            title: "Employee Updated",
+            description: `${values.name}'s information has been successfully updated.`,
+        });
+        
+        fetchEmployees(); // Refetch to show updated data
+        handleDialogClose();
+
+    } catch (error) {
+        console.error("Error updating employee: ", error);
+        toast({
+            variant: "destructive",
+            title: "Update Failed",
+            description: "Could not update employee in Firestore.",
+        });
+    }
   }
 
   const getSupervisorName = (supervisorId: number | null) => {
     if (!supervisorId) return "N/A";
-    return employees.find(e => e.id === supervisorId)?.name || "Unknown";
+    const supervisor = employees.find(e => e.id === supervisorId.toString());
+    return supervisor?.name || "Unknown";
   };
 
-  const potentialSupervisors = employees.filter(e => e.id !== editingEmployee?.id && e.role !== 'Employee');
+  const potentialSupervisors = employees.filter(e => e.id !== editingEmployee?.id && (e.role === 'Supervisor' || e.role === 'Manager' || e.role === 'Admin'));
+
+  if (loading) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Employee Management</CardTitle>
+                <CardDescription>View and manage employee details.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </CardContent>
+        </Card>
+    );
+  }
 
   return (
     <Card>
