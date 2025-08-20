@@ -99,6 +99,7 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
       status: "Pending Supervisor" as const,
       supervisorReason: "",
       managerReason: "",
+      submissionDate: new Date(),
     };
     addLeaveRequest(newRequest);
     form.reset();

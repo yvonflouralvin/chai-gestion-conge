@@ -38,4 +38,5 @@ export type LeaveRequest = {
   status: LeaveRequestStatus;
   supervisorReason: string;
   managerReason: string;
+  submissionDate: Date;
 };

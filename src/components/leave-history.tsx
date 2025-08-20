@@ -98,6 +98,9 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
         filteredRequests = requests;
     }
 
+    // Sort by submission date, most recent first
+    filteredRequests.sort((a, b) => b.submissionDate.getTime() - a.submissionDate.getTime());
+
 
     const handleApprove = (request: LeaveRequest) => {
         if (currentUser.role === 'Supervisor') {
@@ -137,6 +140,7 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
               {currentUser.role !== 'Employee' && <TableHead>Employee</TableHead>}
               <TableHead>Leave Type</TableHead>
               <TableHead>Dates</TableHead>
+              <TableHead className="hidden sm:table-cell">Submitted</TableHead>
               <TableHead className="text-center">Days</TableHead>
               <TableHead>Status</TableHead>
               {currentUser.role !== 'Employee' && <TableHead className="text-right">Actions</TableHead>}
@@ -149,6 +153,7 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
                   {currentUser.role !== 'Employee' && <TableCell>{getEmployeeName(request.employeeId)}</TableCell>}
                   <TableCell className="flex items-center">{getLeaveTypeIcon(request.leaveTypeId)} {getLeaveTypeName(request.leaveTypeId)}</TableCell>
                   <TableCell>{format(request.startDate, 'MMM d')} - {format(request.endDate, 'MMM d, yyyy')}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{format(request.submissionDate, 'MMM d, yyyy')}</TableCell>
                   <TableCell className="text-center">{calculateLeaveDays(request.startDate, request.endDate)}</TableCell>
                   <TableCell>{getStatusBadge(request)}</TableCell>
                   {currentUser.role !== 'Employee' && 
@@ -177,7 +182,7 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
               ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={currentUser.role === 'Employee' ? 4 : 6} className="text-center h-24">
+                    <TableCell colSpan={currentUser.role === 'Employee' ? 5 : 7} className="text-center h-24">
                         {currentUser.role === 'Employee' ? 'You have no leave requests.' : 'No pending requests.'}
                     </TableCell>
                 </TableRow>

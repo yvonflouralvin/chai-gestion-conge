@@ -61,6 +61,7 @@ export default function DashboardPage() {
           status: data.status as LeaveRequestStatus,
           supervisorReason: data.supervisorReason,
           managerReason: data.managerReason,
+          submissionDate: data.submissionDate.toDate(),
         };
       });
       setLeaveRequests(requestsData);
