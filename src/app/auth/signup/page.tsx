@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast";
 import type { EmployeeRole } from "@/types";
 import { Loader2 } from "lucide-react";
@@ -26,22 +25,13 @@ export default function SignUpPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<EmployeeRole | "">("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if(!role) {
-        toast({
-            variant: "destructive",
-            title: "Sign-up Failed",
-            description: "Please select a role.",
-        });
-        return;
-    }
-
+    
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -53,9 +43,9 @@ export default function SignUpPage() {
       await setDoc(doc(db, "users", user.uid), {
         name: name,
         email: email,
-        role: role,
+        role: "Employee" as EmployeeRole,
         // Add default/empty values for other fields for now
-        title: role, 
+        title: "Employee", 
         team: "Unassigned",
         supervisorId: null,
         contractType: "Full-time",
@@ -105,19 +95,6 @@ export default function SignUpPage() {
             <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="role">Role</Label>
-              <Select onValueChange={(value) => setRole(value as EmployeeRole)} value={role}>
-                <SelectTrigger>
-                    <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="Employee">Employee</SelectItem>
-                    <SelectItem value="Supervisor">Supervisor</SelectItem>
-                    <SelectItem value="Manager">Manager</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Create an account"}
