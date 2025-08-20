@@ -33,7 +33,7 @@ type LeaveHistoryProps = {
   employees: Employee[];
   leaveTypes: LeaveType[];
   currentUser: Employee | (Omit<Employee, "id"> & { id: string });
-  updateRequestStatus: (requestId: number, status: LeaveRequestStatus, reason?: string) => void;
+  updateRequestStatus: (requestId: string, status: LeaveRequestStatus, reason?: string) => void;
 };
 
 export function LeaveHistory({ requests, employees, leaveTypes, currentUser, updateRequestStatus }: LeaveHistoryProps) {
@@ -88,7 +88,6 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
     const handleReject = () => {
         if (selectedRequest && reason) {
             updateRequestStatus(selectedRequest.id, 'Rejected', reason);
-            toast({ variant: "destructive", title: "Request Rejected", "description": "The leave request has been rejected."});
             setReason("");
             setSelectedRequest(null);
         } else {

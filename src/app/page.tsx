@@ -3,65 +3,129 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
+import { collection, getDocs, addDoc, doc, updateDoc, query, where, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { Header } from "@/components/header";
 import { LeaveRequestForm } from "@/components/leave-request-form";
 import { LeaveHistory } from "@/components/leave-history";
 import { AdminPanel } from "@/components/admin-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { initialEmployees, leaveTypes, initialLeaveRequests } from "@/lib/data";
+import { leaveTypes } from "@/lib/data";
 import type { Employee, LeaveRequest, LeaveRequestStatus } from "@/types";
 import { useAuth } from "@/context/auth-context";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardPage() {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeaveRequests);
+  const { toast } = useToast();
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchAllData = async () => {
+    if (!currentUser) return;
+    setLoading(true);
+    try {
+      // Fetch Employees
+      const usersSnapshot = await getDocs(collection(db, "users"));
+      const usersData: Employee[] = usersSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name,
+          email: data.email,
+          title: data.title,
+          team: data.team,
+          avatar: data.avatar || `https://placehold.co/40x40.png`,
+          supervisorId: data.supervisorId,
+          role: data.role as Employee['role'],
+          contractType: data.contractType as Employee['contractType'],
+          contractStartDate: data.contractStartDate.toDate(),
+          contractEndDate: data.contractEndDate ? data.contractEndDate.toDate() : null,
+        };
+      });
+      setEmployees(usersData);
+
+      // Fetch Leave Requests
+      const requestsSnapshot = await getDocs(collection(db, "leave-requests"));
+      const requestsData: LeaveRequest[] = requestsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          employeeId: data.employeeId,
+          leaveTypeId: data.leaveTypeId,
+          startDate: data.startDate.toDate(),
+          endDate: data.endDate.toDate(),
+          status: data.status as LeaveRequestStatus,
+          supervisorReason: data.supervisorReason,
+          managerReason: data.managerReason,
+        };
+      });
+      setLeaveRequests(requestsData);
+
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({ variant: "destructive", title: "Error", description: "Failed to load data from the database." });
+    }
+    setLoading(false);
+  };
   
   useEffect(() => {
-    if (!loading && !currentUser) {
+    if (!authLoading && !currentUser) {
       router.push('/auth/signin');
+    } else if (currentUser) {
+        fetchAllData();
     }
-  }, [currentUser, loading, router]);
-  
-  if (loading || !currentUser) {
-    return null; // Or a loading spinner
-  }
+  }, [currentUser, authLoading, router]);
 
-  const addLeaveRequest = (newRequestData: Omit<LeaveRequest, "id">) => {
-    setLeaveRequests(prev => [
-      ...prev,
-      {
-        id: (prev.length > 0 ? Math.max(...prev.map(r => r.id)) : 0) + 1,
-        ...newRequestData,
-      },
-    ]);
+  const addLeaveRequest = async (newRequestData: Omit<LeaveRequest, "id">) => {
+    try {
+        const docRef = await addDoc(collection(db, "leave-requests"), newRequestData);
+        setLeaveRequests(prev => [...prev, { id: docRef.id, ...newRequestData }]);
+        toast({ title: "Request Submitted", description: "Your leave request has been submitted for approval." });
+    } catch (error) {
+        console.error("Error adding leave request: ", error);
+        toast({ variant: "destructive", title: "Submission Failed", description: "Could not submit your leave request." });
+    }
   };
   
-  const handleUpdateEmployee = (updatedEmployee: Employee) => {
-    const newEmployees = employees.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp);
-    setEmployees(newEmployees);
-  };
-
-  const updateRequestStatus = (
-    requestId: number,
+  const updateRequestStatus = async (
+    requestId: string,
     status: LeaveRequestStatus,
     reason?: string
   ) => {
-    setLeaveRequests(prev =>
-      prev.map(req => {
-        if (req.id === requestId) {
-          const updatedReq = { ...req, status };
-          if (reason) {
-            if (currentUser.role === 'Supervisor') updatedReq.supervisorReason = reason;
-            if (currentUser.role === 'Manager') updatedReq.managerReason = reason;
-          }
-          return updatedReq;
+    if (!currentUser) return;
+    try {
+        const requestRef = doc(db, "leave-requests", requestId);
+        const updateData: any = { status };
+
+        const requestDoc = await getDoc(requestRef);
+        if(!requestDoc.exists()) return;
+        const requestData = requestDoc.data();
+
+        if (reason) {
+          if (requestData.status === 'Pending Supervisor') updateData.supervisorReason = reason;
+          if (requestData.status === 'Pending Manager') updateData.managerReason = reason;
         }
-        return req;
-      })
-    );
+
+        await updateDoc(requestRef, updateData);
+        
+        setLeaveRequests(prev =>
+            prev.map(req => req.id === requestId ? { ...req, ...updateData } : req)
+        );
+        toast({ title: "Request Updated", description: "The leave request status has been updated." });
+
+    } catch (error) {
+        console.error("Error updating request status: ", error);
+        toast({ variant: "destructive", title: "Update Failed", description: "Could not update the request status." });
+    }
   };
+
+  if (authLoading || loading || !currentUser) {
+    return <div className="flex h-screen w-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
   
   return (
     <div className="flex min-h-screen w-full flex-col bg-muted/40">

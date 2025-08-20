@@ -14,6 +14,7 @@ export const initialEmployees: Employee[] = [
     contractType: "Full-time",
     contractStartDate: new Date("2022-01-15"),
     contractEndDate: null,
+    email: "alice@example.com",
   },
   {
     id: 2,
@@ -26,6 +27,7 @@ export const initialEmployees: Employee[] = [
     contractType: "Full-time",
     contractStartDate: new Date("2020-03-01"),
     contractEndDate: null,
+    email: "bob@example.com",
   },
   {
     id: 3,
@@ -38,6 +40,7 @@ export const initialEmployees: Employee[] = [
     contractType: "Full-time",
     contractStartDate: new Date("2018-07-20"),
     contractEndDate: null,
+    email: "charlie@example.com",
   },
     {
     id: 4,
@@ -50,6 +53,7 @@ export const initialEmployees: Employee[] = [
     contractType: "Full-time",
     contractStartDate: new Date("2021-09-01"),
     contractEndDate: null,
+    email: "diana@example.com",
   },
   {
     id: 5,
@@ -62,6 +66,7 @@ export const initialEmployees: Employee[] = [
     contractType: "Contract",
     contractStartDate: new Date("2023-05-10"),
     contractEndDate: new Date("2024-11-10"),
+    email: "ethan@example.com",
   }
 ];
 
@@ -72,45 +77,5 @@ export const leaveTypes: LeaveType[] = [
   { id: 4, name: "Unpaid", icon: Briefcase },
 ];
 
-export const initialLeaveRequests: LeaveRequest[] = [
-  {
-    id: 1,
-    employeeId: 1,
-    leaveTypeId: 1,
-    startDate: new Date("2024-08-10"),
-    endDate: new Date("2024-08-15"),
-    status: "Approved",
-    supervisorReason: "Enjoy your vacation!",
-    managerReason: "Approved.",
-  },
-  {
-    id: 2,
-    employeeId: 5,
-    leaveTypeId: 2,
-    startDate: new Date("2024-07-22"),
-    endDate: new Date("2024-07-23"),
-    status: "Pending Manager",
-    supervisorReason: "Approved, feel better soon.",
-    managerReason: "",
-  },
-  {
-    id: 3,
-    employeeId: 1,
-    leaveTypeId: 3,
-    startDate: new Date("2024-09-01"),
-    endDate: new Date("2024-09-14"),
-    status: "Pending Supervisor",
-    supervisorReason: "",
-    managerReason: "",
-  },
-  {
-    id: 4,
-    employeeId: 5,
-    leaveTypeId: 1,
-    startDate: new Date("2024-12-20"),
-    endDate: new Date("2024-12-28"),
-    status: "Rejected",
-    supervisorReason: "Project deadline conflict. Please reschedule.",
-    managerReason: "",
-  },
-];
+// This is no longer used, data is fetched from firestore
+export const initialLeaveRequests: LeaveRequest[] = [];

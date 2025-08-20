@@ -4,13 +4,13 @@ export type EmployeeRole = "Employee" | "Supervisor" | "Manager" | "Admin";
 export type ContractType = "Full-time" | "Part-time" | "Contract";
 
 export type Employee = {
-  id: number | string;
+  id: string;
   name: string;
   email: string;
   title: string;
   team: string;
   avatar: string;
-  supervisorId: number | null;
+  supervisorId: string | null;
   role: EmployeeRole;
   contractType: ContractType;
   contractStartDate: Date;
@@ -30,8 +30,8 @@ export type LeaveRequestStatus =
   | "Rejected";
 
 export type LeaveRequest = {
-  id: number;
-  employeeId: number | string;
+  id: string;
+  employeeId: string;
   leaveTypeId: number;
   startDate: Date;
   endDate: Date;

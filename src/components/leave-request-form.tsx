@@ -38,7 +38,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
 import type { Employee, LeaveRequest, LeaveType } from "@/types";
 
 const formSchema = z.object({
@@ -55,7 +54,6 @@ type LeaveRequestFormProps = {
 };
 
 export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, leaveRequests }: LeaveRequestFormProps) {
-  const { toast } = useToast();
   const [leaveDays, setLeaveDays] = useState(0);
   const [availableLeaveDays, setAvailableLeaveDays] = useState(0);
 
@@ -103,10 +101,6 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
       managerReason: "",
     };
     addLeaveRequest(newRequest);
-    toast({
-      title: "Request Submitted",
-      description: "Your leave request has been submitted for approval.",
-    });
     form.reset();
   }
 
