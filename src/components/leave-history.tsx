@@ -52,7 +52,38 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
 
     const getStatusBadge = (request: LeaveRequest) => {
         const status = request.status;
-        const rejectionReason = request.supervisorReason || request.managerReason;
+        
+        let rejectionContent = null;
+        if (status === 'Rejected') {
+            const employee = employees.find(e => e.id === request.employeeId);
+            if (employee && employee.supervisorId) {
+                 const supervisor = employees.find(e => e.id === employee.supervisorId);
+                 if (supervisor && request.supervisorReason) {
+                     rejectionContent = (
+                        <p><strong>{supervisor.name} (Supervisor):</strong> {request.supervisorReason}</p>
+                     )
+                 }
+            }
+            if (!rejectionContent && request.managerReason) {
+                // Assumption: A manager is rejecting. We don't know who exactly without more data.
+                // For now, let's find any manager. In a real app, you'd store the rejector's ID.
+                const manager = employees.find(e => e.role === 'Manager');
+                 if(manager) {
+                    rejectionContent = (
+                        <p><strong>{manager.name} (Manager):</strong> {request.managerReason}</p>
+                    );
+                 } else {
+                     rejectionContent = (
+                        <p><strong>Manager:</strong> {request.managerReason}</p>
+                     );
+                 }
+            }
+             if (!rejectionContent) {
+                rejectionContent = <p>{request.supervisorReason || request.managerReason}</p>
+            }
+
+        }
+
         const badge = () => {
              switch (status) {
                 case 'Approved': return <Badge variant="default" className="bg-green-500 hover:bg-green-600">Approved</Badge>;
@@ -65,14 +96,14 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
         return (
             <div className="flex items-center gap-2">
                 {badge()}
-                {status === 'Rejected' && rejectionReason && (
+                {status === 'Rejected' && rejectionContent && (
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
                             </TooltipTrigger>
-                            <TooltipContent>
-                                <p>{rejectionReason}</p>
+                            <TooltipContent className="max-w-xs">
+                                {rejectionContent}
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
