@@ -71,12 +71,12 @@ export function AdminPanel() {
         };
       });
       setEmployees(usersData);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching employees: ", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to fetch employees from Firestore.",
+        description: error.message || "Failed to fetch employees from Firestore.",
       });
     }
     setLoading(false);
@@ -127,6 +127,11 @@ export function AdminPanel() {
     form.reset();
   }
 
+  const getSupervisorIdValue = (values: z.infer<typeof employeeSchema>) => {
+      if (!values.supervisorId || values.supervisorId === "na") return null;
+      return parseInt(values.supervisorId, 10);
+  }
+
   async function handleAddEmployee(values: z.infer<typeof employeeSchema>) {
     setIsFormSubmitting(true);
     const tempPassword = Math.random().toString(36).slice(-8);
@@ -144,7 +149,7 @@ export function AdminPanel() {
         team: values.team,
         role: values.role,
         contractType: values.contractType,
-        supervisorId: values.supervisorId ? parseInt(values.supervisorId) : null,
+        supervisorId: getSupervisorIdValue(values),
         contractStartDate: values.contractStartDate,
         contractEndDate: values.contractEndDate,
         avatar: `https://placehold.co/40x40.png`
@@ -184,7 +189,7 @@ export function AdminPanel() {
             team: values.team,
             role: values.role,
             contractType: values.contractType,
-            supervisorId: values.supervisorId ? parseInt(values.supervisorId) : null,
+            supervisorId: getSupervisorIdValue(values),
             contractStartDate: values.contractStartDate,
             contractEndDate: values.contractEndDate,
         });
@@ -345,10 +350,10 @@ export function AdminPanel() {
                     <FormField control={form.control} name="supervisorId" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Supervisor</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <Select onValueChange={field.onChange} value={field.value || undefined}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Select a supervisor" /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                    <SelectItem value="">N/A</SelectItem>
+                                    <SelectItem value="na">N/A</SelectItem>
                                     {potentialSupervisors.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
@@ -403,3 +408,4 @@ export function AdminPanel() {
     </Card>
   );
 }
+
