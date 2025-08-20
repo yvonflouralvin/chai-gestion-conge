@@ -379,7 +379,7 @@ export function AdminPanel() {
                     <FormField control={form.control} name="supervisorId" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Supervisor</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || undefined}>
+                            <Select onValueChange={field.onChange} value={field.value || 'na'}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Select a supervisor" /></SelectTrigger></FormControl>
                                 <SelectContent>
                                     <SelectItem value="na">N/A</SelectItem>
@@ -438,4 +438,5 @@ export function AdminPanel() {
   );
 }
 
+    
     
