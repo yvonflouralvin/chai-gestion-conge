@@ -77,24 +77,13 @@ export default function DashboardPage() {
                 </TabsList>
             </div>
             <TabsContent value="leave-management" className="mt-4">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                  <div className="lg:col-span-3">
-                    <LeaveRequestForm 
-                      leaveTypes={leaveTypes} 
-                      currentUser={currentUser}
-                      addLeaveRequest={addLeaveRequest}
-                    />
-                  </div>
-                  <div className="lg:col-span-4">
-                    <LeaveHistory 
-                      requests={leaveRequests}
-                      employees={employees}
-                      leaveTypes={leaveTypes}
-                      currentUser={currentUser} 
-                      updateRequestStatus={updateRequestStatus}
-                    />
-                  </div>
-              </div>
+               <LeaveHistory 
+                  requests={leaveRequests}
+                  employees={employees}
+                  leaveTypes={leaveTypes}
+                  currentUser={currentUser} 
+                  updateRequestStatus={updateRequestStatus}
+                />
             </TabsContent>
             <TabsContent value="admin-panel" className="mt-4">
               <AdminPanel />
