@@ -69,7 +69,11 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
     } else if (currentUser.role === 'Manager') {
         title = "Pending My Approval";
         filteredRequests = requests.filter(r => r.status === 'Pending Manager');
+    } else if (currentUser.role === 'Admin') {
+        title = "All Leave Requests";
+        filteredRequests = requests;
     }
+
 
     const handleApprove = (request: LeaveRequest) => {
         if (currentUser.role === 'Supervisor') {
@@ -127,10 +131,10 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
                   {currentUser.role !== 'Employee' && 
                     <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
-                            <Button size="sm" onClick={() => handleApprove(request)}>Approve</Button>
+                            <Button size="sm" onClick={() => handleApprove(request)} disabled={currentUser.role === 'Admin'}>Approve</Button>
                             <Dialog onOpenChange={(open) => { if(!open) { setReason(""); setSelectedRequest(null); }}}>
                                 <DialogTrigger asChild>
-                                    <Button size="sm" variant="destructive" onClick={() => setSelectedRequest(request)}>Reject</Button>
+                                    <Button size="sm" variant="destructive" onClick={() => setSelectedRequest(request)} disabled={currentUser.role === 'Admin'}>Reject</Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>

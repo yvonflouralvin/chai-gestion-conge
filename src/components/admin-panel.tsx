@@ -26,7 +26,7 @@ const employeeSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   title: z.string().min(2, { message: "Title is required." }),
   team: z.string().min(2, { message: "Team is required." }),
-  role: z.enum(["Employee", "Supervisor", "Manager"]),
+  role: z.enum(["Employee", "Supervisor", "Manager", "Admin"]),
   contractType: z.enum(["Full-time", "Part-time", "Contract"]),
   supervisorId: z.string().nullable(),
   contractStartDate: z.date({ required_error: "A start date is required." }),
@@ -192,6 +192,7 @@ export function AdminPanel({ employees, onUpdateEmployee }: AdminPanelProps) {
                                     <SelectItem value="Employee">Employee</SelectItem>
                                     <SelectItem value="Supervisor">Supervisor</SelectItem>
                                     <SelectItem value="Manager">Manager</SelectItem>
+                                    <SelectItem value="Admin">Admin</SelectItem>
                                 </SelectContent>
                             </Select>
                             <FormMessage />

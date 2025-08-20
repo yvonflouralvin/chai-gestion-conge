@@ -1,7 +1,6 @@
-
 import type { LucideIcon } from "lucide-react";
 
-export type EmployeeRole = "Employee" | "Supervisor" | "Manager";
+export type EmployeeRole = "Employee" | "Supervisor" | "Manager" | "Admin";
 export type ContractType = "Full-time" | "Part-time" | "Contract";
 
 export type Employee = {
