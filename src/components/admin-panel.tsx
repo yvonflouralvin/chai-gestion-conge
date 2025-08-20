@@ -7,8 +7,9 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { format } from "date-fns"
 import { CalendarIcon, Edit, UserPlus, X, Loader2 } from "lucide-react"
-import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { collection, getDocs, doc, setDoc, updateDoc } from "firebase/firestore";
+import { createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
 
 import type { Employee, ContractType, EmployeeRole } from "@/types"
 import { cn } from "@/lib/utils"
@@ -26,6 +27,7 @@ import { Calendar } from "@/components/ui/calendar"
 
 const employeeSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  email: z.string().email({ message: "Please enter a valid email." }),
   title: z.string().min(2, { message: "Title is required." }),
   team: z.string().min(2, { message: "Team is required." }),
   role: z.enum(["Employee", "Supervisor", "Manager", "Admin"]),
@@ -39,7 +41,9 @@ export function AdminPanel() {
   const { toast } = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFormSubmitting, setIsFormSubmitting] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
   const form = useForm<z.infer<typeof employeeSchema>>({
@@ -86,6 +90,7 @@ export function AdminPanel() {
     if (editingEmployee) {
       form.reset({
         name: editingEmployee.name,
+        email: editingEmployee.email,
         title: editingEmployee.title,
         team: editingEmployee.team,
         role: editingEmployee.role,
@@ -95,18 +100,20 @@ export function AdminPanel() {
         contractEndDate: editingEmployee.contractEndDate,
       });
     } else {
+      // Default values for the "Add Employee" form
       form.reset({
         name: "",
+        email: "",
         title: "",
         team: "",
         role: "Employee",
         contractType: "Full-time",
         supervisorId: null,
-        contractStartDate: undefined,
+        contractStartDate: new Date(),
         contractEndDate: null,
       });
     }
-  }, [editingEmployee, form]);
+  }, [editingEmployee, isAddDialogOpen, form]);
 
   const handleEditClick = (employee: Employee) => {
     setEditingEmployee(employee);
@@ -116,11 +123,59 @@ export function AdminPanel() {
   const handleDialogClose = () => {
     setEditingEmployee(null);
     setIsEditDialogOpen(false);
+    setIsAddDialogOpen(false);
+    form.reset();
   }
 
-  async function onSubmit(values: z.infer<typeof employeeSchema>) {
-    if (!editingEmployee) return;
+  async function handleAddEmployee(values: z.infer<typeof employeeSchema>) {
+    setIsFormSubmitting(true);
+    const tempPassword = Math.random().toString(36).slice(-8);
 
+    try {
+      // 1. Create user in Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, tempPassword);
+      const user = userCredential.user;
+
+      // 2. Save user details in Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        name: values.name,
+        email: values.email,
+        title: values.title,
+        team: values.team,
+        role: values.role,
+        contractType: values.contractType,
+        supervisorId: values.supervisorId ? parseInt(values.supervisorId) : null,
+        contractStartDate: values.contractStartDate,
+        contractEndDate: values.contractEndDate,
+        avatar: `https://placehold.co/40x40.png`
+      });
+
+      // 3. Send password reset email
+      await sendPasswordResetEmail(auth, values.email);
+
+      toast({
+          title: "Employee Added",
+          description: `${values.name} has been added and a setup email has been sent.`,
+      });
+
+      fetchEmployees(); // Refetch to show updated data
+      handleDialogClose();
+
+    } catch (error: any) {
+      console.error("Error adding employee: ", error);
+      toast({
+          variant: "destructive",
+          title: "Add Employee Failed",
+          description: error.message || "Could not add employee.",
+      });
+    } finally {
+        setIsFormSubmitting(false);
+    }
+  }
+
+  async function handleUpdateEmployee(values: z.infer<typeof employeeSchema>) {
+    if (!editingEmployee) return;
+    setIsFormSubmitting(true);
     try {
         const employeeRef = doc(db, "users", editingEmployee.id.toString());
         await updateDoc(employeeRef, {
@@ -149,6 +204,8 @@ export function AdminPanel() {
             title: "Update Failed",
             description: "Could not update employee in Firestore.",
         });
+    } finally {
+        setIsFormSubmitting(false);
     }
   }
 
@@ -181,7 +238,7 @@ export function AdminPanel() {
             <CardTitle>Employee Management</CardTitle>
             <CardDescription>View and manage employee details.</CardDescription>
         </div>
-        <Button disabled>
+        <Button onClick={() => setIsAddDialogOpen(true)}>
             <UserPlus className="mr-2 h-4 w-4"/>
             Add Employee
         </Button>
@@ -220,18 +277,25 @@ export function AdminPanel() {
             </Table>
         </div>
 
-        <Dialog open={isEditDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}>
+        <Dialog open={isEditDialogOpen || isAddDialogOpen} onOpenChange={(open) => !open && handleDialogClose()}>
           <DialogContent className="sm:max-w-3xl">
             <DialogHeader>
-              <DialogTitle>Edit Employee: {editingEmployee?.name}</DialogTitle>
+              <DialogTitle>{isAddDialogOpen ? "Add New Employee" : `Edit Employee: ${editingEmployee?.name}`}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+              <form onSubmit={form.handleSubmit(isAddDialogOpen ? handleAddEmployee : handleUpdateEmployee)} className="grid gap-4 py-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField control={form.control} name="name" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Full Name</FormLabel>
                             <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
+                     <FormField control={form.control} name="email" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl><Input {...field} type="email" disabled={!isAddDialogOpen} /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )} />
@@ -308,7 +372,7 @@ export function AdminPanel() {
                     )} />
                     <FormField control={form.control} name="contractEndDate" render={({ field }) => (
                         <FormItem className="flex flex-col">
-                            <FormLabel>Contract End Date</FormLabel>
+                            <FormLabel>Contract End Date (optional)</FormLabel>
                             <Popover><PopoverTrigger asChild><FormControl>
                                 <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
                                     {field.value ? format(field.value, "PPP") : <span>Ongoing</span>}
@@ -327,7 +391,9 @@ export function AdminPanel() {
                 </div>
                 <DialogFooter>
                     <Button type="button" variant="outline" onClick={handleDialogClose}>Cancel</Button>
-                    <Button type="submit">Save Changes</Button>
+                    <Button type="submit" disabled={isFormSubmitting}>
+                         {isFormSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save Changes"}
+                    </Button>
                 </DialogFooter>
               </form>
             </Form>
