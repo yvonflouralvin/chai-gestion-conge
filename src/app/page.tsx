@@ -14,6 +14,7 @@ import type { Employee, LeaveRequest, LeaveRequestStatus } from "@/types";
 import { useAuth } from "@/context/auth-context";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function DashboardPage() {
   const { currentUser, loading: authLoading } = useAuth();
@@ -132,16 +133,26 @@ export default function DashboardPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         {currentUser.role === 'Admin' ? 
           (
-            <div className="flex flex-col gap-4">
-              <AdminPanel leaveRequests={leaveRequests} />
-              <LeaveHistory 
+            <Tabs defaultValue="employees">
+              <div className="flex items-center">
+                <TabsList>
+                  <TabsTrigger value="employees">Employee Management</TabsTrigger>
+                  <TabsTrigger value="requests">Leave Requests</TabsTrigger>
+                </TabsList>
+              </div>
+              <TabsContent value="employees" className="mt-4">
+                <AdminPanel leaveRequests={leaveRequests} />
+              </TabsContent>
+              <TabsContent value="requests" className="mt-4">
+                <LeaveHistory 
                   requests={leaveRequests}
                   employees={employees}
                   leaveTypes={leaveTypes}
                   currentUser={currentUser} 
                   updateRequestStatus={updateRequestStatus}
                 />
-            </div>
+              </TabsContent>
+            </Tabs>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
               <div className="lg:col-span-3">
@@ -167,3 +178,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
