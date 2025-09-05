@@ -85,7 +85,16 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
 
 
     const getEmployeeName = (id: number | string) => employees.find(e => e.id === id)?.name || 'Unknown';
-    const getLeaveTypeName = (id: number) => leaveTypes.find(lt => lt.id === id)?.name || 'Unknown';
+    
+    const getLeaveTypeName = (request: LeaveRequest) => {
+        const leaveType = leaveTypes.find(lt => lt.id === request.leaveTypeId);
+        if (!leaveType) return 'Unknown';
+        if (leaveType.id === 4 && request.circumstanceType) { // Circumstance Leave
+            return `${leaveType.name} (${request.circumstanceType})`;
+        }
+        return leaveType.name;
+    };
+    
     const getLeaveTypeIcon = (id: number) => {
         const Icon = leaveTypes.find(lt => lt.id === id)?.icon;
         return Icon ? <Icon className="h-4 w-4 mr-2" /> : null;
@@ -260,7 +269,7 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
               filteredRequests.map((request) => (
                 <TableRow key={request.id}>
                   {showEmployeeColumn && <TableCell>{getEmployeeName(request.employeeId)}</TableCell>}
-                  <TableCell className="flex items-center">{getLeaveTypeIcon(request.leaveTypeId)} {getLeaveTypeName(request.leaveTypeId)}</TableCell>
+                  <TableCell className="flex items-center">{getLeaveTypeIcon(request.leaveTypeId)} {getLeaveTypeName(request)}</TableCell>
                   <TableCell>{format(request.startDate, 'MMM d')} - {format(request.endDate, 'MMM d, yyyy')}</TableCell>
                   <TableCell className="hidden sm:table-cell">{format(request.submissionDate, 'MMM d, yyyy')}</TableCell>
                   <TableCell className="text-center">{calculateLeaveDays(request.startDate, request.endDate)}</TableCell>

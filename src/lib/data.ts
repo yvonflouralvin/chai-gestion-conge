@@ -74,7 +74,7 @@ export const leaveTypes: LeaveType[] = [
   { id: 1, name: "Annuel", icon: Plane },
   { id: 2, name: "Sick", icon: Heart },
   { id: 3, name: "Paternity", icon: Baby },
-  { id: 4, name: "Circonstance (Deuil, mariage,déménagement)", icon: Briefcase },
+  { id: 4, name: "Circonstance", icon: Briefcase, subTypes: ["Deuil", "Mariage", "Déménagement"] },
 ];
 
 // This is no longer used, data is fetched from firestore

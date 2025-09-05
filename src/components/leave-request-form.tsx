@@ -38,13 +38,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { EmployeeWithCurrentContract, LeaveRequest, LeaveType } from "@/types";
+import type { EmployeeWithCurrentContract, LeaveRequest, LeaveType, CircumstanceType } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   leaveTypeId: z.string().min(1, { message: "Please select a leave type." }),
+  circumstanceType: z.string().optional(),
   startDate: z.date({ required_error: "A start date is required." }),
   endDate: z.date({ required_error: "An end date is required." }),
+}).refine(data => {
+    const leaveType = leaveTypes.find(lt => lt.id === parseInt(data.leaveTypeId, 10));
+    if (leaveType && leaveType.subTypes && !data.circumstanceType) {
+        return false;
+    }
+    return true;
+}, {
+    message: "Please select a circumstance type.",
+    path: ["circumstanceType"],
 });
 
 type LeaveRequestFormProps = {
@@ -62,12 +72,17 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+        circumstanceType: "",
+    }
   });
 
-  const { watch } = form;
+  const { watch, control } = form;
   const startDate = watch("startDate");
   const endDate = watch("endDate");
   const leaveTypeId = watch("leaveTypeId");
+
+  const selectedLeaveType = leaveTypes.find(lt => lt.id === parseInt(leaveTypeId, 10));
 
   useEffect(() => {
     if (startDate && endDate) {
@@ -141,6 +156,7 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
     const newRequest = {
       employeeId: currentUser.id,
       leaveTypeId: selectedLeaveTypeId,
+      circumstanceType: (values.circumstanceType as CircumstanceType) || null,
       startDate: values.startDate,
       endDate: values.endDate,
       status: "Pending Supervisor" as const,
@@ -186,33 +202,64 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
           <CardContent className="space-y-6">
             {renderAvailableDays()}
 
-            <FormField
-              control={form.control}
-              name="leaveTypeId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Leave Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a type of leave" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {leaveTypes.map((type) => (
-                        <SelectItem key={type.id} value={String(type.id)}>
-                           <div className="flex items-center gap-2">
-                             <type.icon className="h-4 w-4 text-muted-foreground" />
-                             <span>{type.name}</span>
-                           </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={control}
+                name="leaveTypeId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Leave Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a type of leave" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {leaveTypes.map((type) => (
+                          <SelectItem key={type.id} value={String(type.id)}>
+                             <div className="flex items-center gap-2">
+                               <type.icon className="h-4 w-4 text-muted-foreground" />
+                               <span>{type.name}</span>
+                             </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {selectedLeaveType?.subTypes && (
+                 <FormField
+                    control={control}
+                    name="circumstanceType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Circumstance</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a circumstance" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {selectedLeaveType.subTypes?.map((subType) => (
+                              <SelectItem key={subType} value={subType}>
+                                {subType}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
               )}
-            />
+            </div>
+
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}

@@ -1,3 +1,4 @@
+
 import type { LucideIcon } from "lucide-react";
 
 export type EmployeeRole = "Employee" | "Supervisor" | "Manager" | "Admin";
@@ -33,11 +34,13 @@ export type EmployeeWithCurrentContract = Employee & {
   contractEndDate: Date | null;
 };
 
+export type CircumstanceType = "Deuil" | "Mariage" | "Déménagement";
 
 export type LeaveType = {
   id: number;
   name:string;
   icon: LucideIcon;
+  subTypes?: CircumstanceType[];
 };
 
 export type LeaveRequestStatus =
@@ -50,6 +53,7 @@ export type LeaveRequest = {
   id: string;
   employeeId: string;
   leaveTypeId: number;
+  circumstanceType?: CircumstanceType | null;
   startDate: Date;
   endDate: Date;
   status: LeaveRequestStatus;

@@ -43,6 +43,7 @@ export default function DashboardPage() {
           id: doc.id,
           employeeId: data.employeeId,
           leaveTypeId: data.leaveTypeId,
+          circumstanceType: data.circumstanceType,
           startDate: data.startDate.toDate(),
           endDate: data.endDate.toDate(),
           status: data.status as LeaveRequestStatus,
@@ -274,5 +275,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
