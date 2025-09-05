@@ -69,6 +69,8 @@ export function sendLeaveRequestUpdatedEmail(props: UpdatedEmailProps) {
     const formattedStartDate = format(request.startDate, "PPP");
     const formattedEndDate = format(request.endDate, "PPP");
 
+    const approvalCommentHtml = request.comment ? `<p><strong>Comment from ${actor.name}:</strong> ${request.comment}</p>` : '';
+
     // Scenario 1: Supervisor approves, notify Manager
     if (request.status === 'Pending Manager' && manager) {
         const subject = `Leave Request for ${employee.name} needs your approval`;
@@ -80,12 +82,13 @@ export function sendLeaveRequestUpdatedEmail(props: UpdatedEmailProps) {
                 <li><strong>Start Date:</strong> ${formattedStartDate}</li>
                 <li><strong>End Date:</strong> ${formattedEndDate}</li>
             </ul>
+            ${approvalCommentHtml}
         `;
         sendEmail({ to: manager.email, subject, body });
 
         // Also notify the employee of the progress
         const employeeSubject = `Update on your leave request`;
-        const employeeBody = `<p>Hello ${employee.name},</p><p>Your leave request has been approved by your supervisor and is now pending final approval from the manager.</p>`;
+        const employeeBody = `<p>Hello ${employee.name},</p><p>Your leave request has been approved by your supervisor and is now pending final approval from the manager.</p>${approvalCommentHtml}`;
         sendEmail({ to: employee.email, subject: employeeSubject, body: employeeBody });
     }
 
@@ -100,6 +103,7 @@ export function sendLeaveRequestUpdatedEmail(props: UpdatedEmailProps) {
                 <li><strong>Start Date:</strong> ${formattedStartDate}</li>
                 <li><strong>End Date:</strong> ${formattedEndDate}</li>
             </ul>
+             ${approvalCommentHtml}
         `;
         sendEmail({ to: employee.email, subject, body });
     }

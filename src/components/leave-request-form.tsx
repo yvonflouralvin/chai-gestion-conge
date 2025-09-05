@@ -146,6 +146,7 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
       status: "Pending Supervisor" as const,
       supervisorReason: "",
       managerReason: "",
+      comment: "",
       submissionDate: new Date(),
     };
     addLeaveRequest(newRequest);

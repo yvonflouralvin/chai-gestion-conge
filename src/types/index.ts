@@ -26,7 +26,7 @@ export type Employee = {
 
 // Derived properties for convenience
 export type EmployeeWithCurrentContract = Employee & {
-  title: string;
+  title:string;
   team: string;
   contractType: ContractType;
   contractStartDate: Date;
@@ -55,5 +55,6 @@ export type LeaveRequest = {
   status: LeaveRequestStatus;
   supervisorReason: string;
   managerReason: string;
+  comment: string;
   submissionDate: Date;
 };

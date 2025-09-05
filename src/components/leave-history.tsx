@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import {
   Table,
@@ -26,17 +26,29 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { calculateLeaveDays } from "@/lib/utils";
+import { calculateLeaveDays, cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { Info } from "lucide-react";
+import { Info, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Calendar } from "./ui/calendar";
+import { Label } from "./ui/label";
 
 type LeaveHistoryProps = {
   requests: LeaveRequest[];
   employees: EmployeeWithCurrentContract[];
   leaveTypes: LeaveType[];
   currentUser: EmployeeWithCurrentContract;
-  updateRequestStatus: (requestId: string, status: LeaveRequestStatus, reason?: string) => void;
+  updateRequestStatus: (
+    requestId: string, 
+    status: LeaveRequestStatus, 
+    details?: { 
+        reason?: string; 
+        comment?: string;
+        startDate?: Date;
+        endDate?: Date;
+    }
+  ) => void;
   view: "personal" | "approvals" | "all"; 
 };
 
@@ -44,9 +56,32 @@ type StatusFilter = LeaveRequestStatus | "All";
 
 export function LeaveHistory({ requests, employees, leaveTypes, currentUser, updateRequestStatus, view }: LeaveHistoryProps) {
     const { toast } = useToast();
-    const [reason, setReason] = useState("");
+    const [rejectionReason, setRejectionReason] = useState("");
     const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
+    
+    // State for approval dialog
+    const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+    const [approvalComment, setApprovalComment] = useState("");
+    const [approvalStartDate, setApprovalStartDate] = useState<Date | undefined>();
+    const [approvalEndDate, setApprovalEndDate] = useState<Date | undefined>();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (selectedRequest) {
+            setApprovalComment(selectedRequest.comment || "");
+            setApprovalStartDate(selectedRequest.startDate);
+            setApprovalEndDate(selectedRequest.endDate);
+        }
+    }, [selectedRequest]);
+
+    const handleApprovalDialogClose = () => {
+        setIsApprovalDialogOpen(false);
+        setSelectedRequest(null);
+        setApprovalComment("");
+        setApprovalStartDate(undefined);
+        setApprovalEndDate(undefined);
+    }
 
 
     const getEmployeeName = (id: number | string) => employees.find(e => e.id === id)?.name || 'Unknown';
@@ -59,33 +94,28 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
     const getStatusBadge = (request: LeaveRequest) => {
         const status = request.status;
         
-        let rejectionContent = null;
+        let tooltipContent = null;
         if (status === 'Rejected') {
             const employee = employees.find(e => e.id === request.employeeId);
             if (employee && employee.supervisorId) {
                  const supervisor = employees.find(e => e.id === employee.supervisorId);
                  if (supervisor && request.supervisorReason) {
-                     rejectionContent = (
-                        <p><strong>{supervisor.name} (Supervisor):</strong> {request.supervisorReason}</p>
-                     )
+                     tooltipContent = <p><strong>{supervisor.name} (Supervisor):</strong> {request.supervisorReason}</p>
                  }
             }
-            if (!rejectionContent && request.managerReason) {
+            if (!tooltipContent && request.managerReason) {
                 const manager = employees.find(e => e.role === 'Manager' && e.id !== request.employeeId);
                  if(manager) {
-                    rejectionContent = (
-                        <p><strong>{manager.name} (Manager):</strong> {request.managerReason}</p>
-                    );
+                    tooltipContent = <p><strong>{manager.name} (Manager):</strong> {request.managerReason}</p>
                  } else {
-                     rejectionContent = (
-                        <p><strong>Manager:</strong> {request.managerReason}</p>
-                     );
+                     tooltipContent = <p><strong>Manager:</strong> {request.managerReason}</p>
                  }
             }
-             if (!rejectionContent) {
-                rejectionContent = <p>{request.supervisorReason || request.managerReason}</p>
+             if (!tooltipContent && request.supervisorReason) {
+                tooltipContent = <p>{request.supervisorReason}</p>
             }
-
+        } else if (request.comment) {
+            tooltipContent = <p><strong>Comment:</strong> {request.comment}</p>
         }
 
         const badge = () => {
@@ -100,14 +130,14 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
         return (
             <div className="flex items-center gap-2">
                 {badge()}
-                {status === 'Rejected' && rejectionContent && (
+                {tooltipContent && (
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
-                                {rejectionContent}
+                                {tooltipContent}
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -161,21 +191,26 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
         : baseRequests.filter(r => r.status === statusFilter)
     ).sort((a, b) => b.submissionDate.getTime() - a.submissionDate.getTime());
 
+    const handleApprove = async () => {
+        if (!selectedRequest || !approvalStartDate || !approvalEndDate) return;
+        setIsSubmitting(true);
+        const nextStatus = currentUser.role === 'Supervisor' ? 'Pending Manager' : 'Approved';
+        
+        await updateRequestStatus(selectedRequest.id, nextStatus, {
+            comment: approvalComment,
+            startDate: approvalStartDate,
+            endDate: approvalEndDate,
+        });
 
-    const handleApprove = (request: LeaveRequest) => {
-        if (currentUser.role === 'Supervisor') {
-            updateRequestStatus(request.id, 'Pending Manager');
-            toast({ title: "Request Approved", description: "The request has been forwarded to the manager."});
-        } else if (currentUser.role === 'Manager') {
-            updateRequestStatus(request.id, 'Approved');
-            toast({ title: "Request Approved", description: "The leave request is fully approved."});
-        }
+        toast({ title: "Request Approved", description: `The request has been updated and moved to ${nextStatus}.`});
+        setIsSubmitting(false);
+        handleApprovalDialogClose();
     }
 
     const handleReject = () => {
-        if (selectedRequest && reason) {
-            updateRequestStatus(selectedRequest.id, 'Rejected', reason);
-            setReason("");
+        if (selectedRequest && rejectionReason) {
+            updateRequestStatus(selectedRequest.id, 'Rejected', { reason: rejectionReason });
+            setRejectionReason("");
             setSelectedRequest(null);
         } else {
             toast({ variant: "destructive", title: "Reason Required", description: "Please provide a reason for rejection."});
@@ -183,6 +218,7 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
     }
 
   return (
+    <>
     <Card>
       <CardHeader className="flex-row items-center justify-between">
         <div>
@@ -232,8 +268,17 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
                   {showActionsColumn && 
                     <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
-                             <Button size="sm" onClick={() => handleApprove(request)} disabled={request.status === 'Approved' || request.status === 'Rejected' || (currentUser.role === 'Supervisor' && request.status !== 'Pending Supervisor') || (currentUser.role === 'Manager' && request.status !== 'Pending Manager') }>Approve</Button>
-                            <Dialog onOpenChange={(open) => { if(!open) { setReason(""); setSelectedRequest(null); }}}>
+                            <Button 
+                                size="sm" 
+                                onClick={() => {
+                                    setSelectedRequest(request);
+                                    setIsApprovalDialogOpen(true);
+                                }} 
+                                disabled={request.status === 'Approved' || request.status === 'Rejected' || (currentUser.role === 'Supervisor' && request.status !== 'Pending Supervisor') || (currentUser.role === 'Manager' && request.status !== 'Pending Manager') }
+                            >
+                                Approve
+                            </Button>
+                            <Dialog onOpenChange={(open) => { if(!open) { setRejectionReason(""); setSelectedRequest(null); }}}>
                                 <DialogTrigger asChild>
                                     <Button size="sm" variant="destructive" onClick={() => setSelectedRequest(request)} disabled={request.status === 'Approved' || request.status === 'Rejected'}>Reject</Button>
                                 </DialogTrigger>
@@ -242,7 +287,7 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
                                         <DialogTitle>Reject Leave Request</DialogTitle>
                                         <DialogDescription>Please provide a reason for rejecting this request.</DialogDescription>
                                     </DialogHeader>
-                                    <Textarea placeholder="Type your reason here." value={reason} onChange={(e) => setReason(e.target.value)} />
+                                    <Textarea placeholder="Type your reason here." value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} />
                                     <DialogFooter>
                                         <Button type="submit" onClick={handleReject}>Confirm Rejection</Button>
                                     </DialogFooter>
@@ -264,5 +309,80 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
         </Table>
       </CardContent>
     </Card>
+    
+    {/* Approval Dialog */}
+    <Dialog open={isApprovalDialogOpen} onOpenChange={(open) => !open && handleApprovalDialogClose()}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Approve Leave Request</DialogTitle>
+                <DialogDescription>
+                    Review, modify if necessary, and approve the request for {selectedRequest ? getEmployeeName(selectedRequest.employeeId) : ''}.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="startDate">Start Date</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    id="startDate"
+                                    variant="outline"
+                                    className={cn("w-full justify-start text-left font-normal", !approvalStartDate && "text-muted-foreground")}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {approvalStartDate ? format(approvalStartDate, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={approvalStartDate} onSelect={setApprovalStartDate} initialFocus />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="endDate">End Date</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    id="endDate"
+                                    variant="outline"
+                                    className={cn("w-full justify-start text-left font-normal", !approvalEndDate && "text-muted-foreground")}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {approvalEndDate ? format(approvalEndDate, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={approvalEndDate} onSelect={setApprovalEndDate} disabled={(date) => approvalStartDate ? date < approvalStartDate : false} initialFocus />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                </div>
+                 <div className="space-y-2">
+                    <Label>Total Days</Label>
+                    <div className="rounded-md border bg-muted/50 p-3 text-center">
+                        <p className="text-2xl font-bold">{calculateLeaveDays(approvalStartDate, approvalEndDate)}</p>
+                    </div>
+                 </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="approvalComment">Comment (optional)</Label>
+                    <Textarea 
+                        id="approvalComment"
+                        placeholder="Add an optional comment..." 
+                        value={approvalComment} 
+                        onChange={(e) => setApprovalComment(e.target.value)} 
+                    />
+                 </div>
+            </div>
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick={handleApprovalDialogClose}>Cancel</Button>
+                <Button type="button" onClick={handleApprove} disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Confirm Approval
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }

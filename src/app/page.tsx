@@ -48,6 +48,7 @@ export default function DashboardPage() {
           status: data.status as LeaveRequestStatus,
           supervisorReason: data.supervisorReason,
           managerReason: data.managerReason,
+          comment: data.comment,
           submissionDate: data.submissionDate ? data.submissionDate.toDate() : data.startDate.toDate(),
         };
       });
@@ -96,7 +97,12 @@ export default function DashboardPage() {
   const updateRequestStatus = async (
     requestId: string,
     status: LeaveRequestStatus,
-    reason?: string
+    details?: {
+        reason?: string;
+        comment?: string;
+        startDate?: Date;
+        endDate?: Date;
+    }
   ) => {
     if (!currentUser) return;
     try {
@@ -105,20 +111,22 @@ export default function DashboardPage() {
         if (!requestToUpdate) return;
 
         const updateData: any = { status };
-        let finalReason = reason;
-
-        if (reason) {
-           if (currentUser.role === 'Supervisor') {
-            updateData.supervisorReason = reason;
-           } else if (currentUser.role === 'Manager') {
-            updateData.managerReason = reason;
-           }
+        
+        // Handle status-specific logic
+        if (status === 'Rejected') {
+            if (details?.reason) {
+                if (currentUser.role === 'Supervisor') updateData.supervisorReason = details.reason;
+                else if (currentUser.role === 'Manager') updateData.managerReason = details.reason;
+            }
         } else {
-            // Ensure reason is reset if status changes back from Rejected
+            // Reset reasons if not rejecting
             if (currentUser.role === 'Supervisor') updateData.supervisorReason = "";
             if (currentUser.role === 'Manager') updateData.managerReason = "";
         }
 
+        if (details?.comment) updateData.comment = details.comment;
+        if (details?.startDate) updateData.startDate = details.startDate;
+        if (details?.endDate) updateData.endDate = details.endDate;
 
         await updateDoc(requestRef, updateData);
         
