@@ -15,7 +15,7 @@ export function Header({ currentUser }: HeaderProps) {
       <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
         <div className="flex gap-2 items-center">
           <Leaf className="h-3 w-3 text-primary" />
-          <h1 className="text-lg font-bold tracking-tight text-primary">EasyLeave</h1>
+          <h1 className="text-lg font-bold tracking-tight text-primary">Chai Request</h1>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="flex items-center space-x-1">

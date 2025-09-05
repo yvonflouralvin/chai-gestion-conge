@@ -71,10 +71,10 @@ export const initialEmployees: Employee[] = [
 ];
 
 export const leaveTypes: LeaveType[] = [
-  { id: 1, name: "Annual", icon: Plane },
+  { id: 1, name: "Annuel", icon: Plane },
   { id: 2, name: "Sick", icon: Heart },
   { id: 3, name: "Paternity", icon: Baby },
-  { id: 4, name: "Unpaid", icon: Briefcase },
+  { id: 4, name: "Circonstance (Deuil, mariage,déménagement)", icon: Briefcase },
 ];
 
 // This is no longer used, data is fetched from firestore

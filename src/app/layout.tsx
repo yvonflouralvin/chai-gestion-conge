@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/auth-context';
 
 export const metadata: Metadata = {
-  title: 'EasyLeave',
+  title: 'CHAI Request',
   description: 'Manage your leave requests with ease.',
 };
 

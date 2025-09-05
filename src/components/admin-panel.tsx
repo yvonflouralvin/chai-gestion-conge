@@ -32,7 +32,7 @@ const employeeSchema = z.object({
   title: z.string().min(2, { message: "Title is required." }),
   team: z.string().min(2, { message: "Team is required." }),
   role: z.enum(["Employee", "Supervisor", "Manager", "Admin"]),
-  contractType: z.enum(["Full-time", "Part-time", "Contract"]),
+  contractType: z.enum(["Contrat-Staff", "Contrat-Independant", "Contract"]),
   supervisorId: z.string().nullable(),
   contractStartDate: z.date({ required_error: "A start date is required." }),
   contractEndDate: z.date().nullable(),
@@ -113,7 +113,7 @@ export function AdminPanel({ leaveRequests }: AdminPanelProps) {
         title: "",
         team: "",
         role: "Employee",
-        contractType: "Full-time",
+        contractType: "Contrat-Staff",
         supervisorId: null,
         contractStartDate: new Date(),
         contractEndDate: null,
@@ -371,9 +371,9 @@ export function AdminPanel({ leaveRequests }: AdminPanelProps) {
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                    <SelectItem value="Full-time">Full-time</SelectItem>
-                                    <SelectItem value="Part-time">Part-time</SelectItem>
-                                    <SelectItem value="Contract">Contract</SelectItem>
+                                    <SelectItem value="Contrat-Staff">Contrat Staff</SelectItem>
+                                    <SelectItem value="Contrat-Independant">Contrat Independant</SelectItem>
+                                    <SelectItem value="Contract">Contrat de stage</SelectItem>
                                 </SelectContent>
                             </Select>
                             <FormMessage />
