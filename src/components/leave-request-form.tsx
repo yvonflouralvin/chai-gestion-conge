@@ -40,12 +40,16 @@ import {
 } from "@/components/ui/select";
 import type { EmployeeWithCurrentContract, LeaveRequest, LeaveType, CircumstanceType } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { leaveTypes } from "@/lib/data";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import { Info } from "lucide-react";
 
 const formSchema = z.object({
   leaveTypeId: z.string().min(1, { message: "Please select a leave type." }),
   circumstanceType: z.string().optional(),
   startDate: z.date({ required_error: "A start date is required." }),
   endDate: z.date({ required_error: "An end date is required." }),
+  document: z.any().optional(), // For file upload
 }).refine(data => {
     const leaveType = leaveTypes.find(lt => lt.id === parseInt(data.leaveTypeId, 10));
     if (leaveType && leaveType.subTypes && !data.circumstanceType) {
@@ -58,13 +62,12 @@ const formSchema = z.object({
 });
 
 type LeaveRequestFormProps = {
-  leaveTypes: LeaveType[];
   currentUser: EmployeeWithCurrentContract;
   addLeaveRequest: (request: Omit<LeaveRequest, "id">) => void;
   leaveRequests: LeaveRequest[];
 };
 
-export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, leaveRequests }: LeaveRequestFormProps) {
+export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }: LeaveRequestFormProps) {
   const [leaveDays, setLeaveDays] = useState(0);
   const [availableLeaveDays, setAvailableLeaveDays] = useState(0);
   const [availablePaternityDays, setAvailablePaternityDays] = useState(0);
@@ -129,7 +132,7 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
   }, [currentUser, leaveRequests]);
 
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     const selectedLeaveTypeId = parseInt(values.leaveTypeId, 10);
     
     // Validation for Annual leave (ID 1)
@@ -151,9 +154,22 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
       });
       return;
     }
+    
+    // Placeholder for file upload logic
+    let documentUrl: string | null = null;
+    if (selectedLeaveTypeId === 5 && values.document) {
+        // **FILE UPLOAD LOGIC SHOULD GO HERE**
+        // 1. Upload the file to Firebase Storage
+        // 2. Get the download URL
+        // 3. Set `documentUrl` to the download URL
+        // Example: documentUrl = await uploadFile(values.document);
+        toast({
+            title: "File Upload Pending",
+            description: "File upload functionality is not yet implemented.",
+        });
+    }
 
-
-    const newRequest = {
+    const newRequest: Omit<LeaveRequest, "id"> = {
       employeeId: currentUser.id,
       leaveTypeId: selectedLeaveTypeId,
       circumstanceType: (values.circumstanceType as CircumstanceType) || null,
@@ -164,7 +180,9 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
       managerReason: "",
       comment: "",
       submissionDate: new Date(),
+      documentUrl: documentUrl
     };
+
     addLeaveRequest(newRequest);
     form.reset();
   }
@@ -184,6 +202,14 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
             <div className="rounded-md border bg-muted/50 p-3 text-center">
                 <p className="text-sm text-muted-foreground">Available Paternity Leave Days (This Year)</p>
                 <p className="text-2xl font-bold">{availablePaternityDays}</p>
+            </div>
+        )
+    }
+     if (selectedLeaveTypeId === 5) { // Maternity Leave
+         return (
+            <div className="rounded-md border bg-muted/50 p-3 text-center">
+                <p className="text-sm text-muted-foreground">Maternity Leave Entitlement</p>
+                <p className="text-2xl font-bold">90 Days</p>
             </div>
         )
     }
@@ -259,6 +285,20 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
               )}
             </div>
 
+            {selectedLeaveType?.id === 5 && (
+                <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Document Required</AlertTitle>
+                    <AlertDescription>
+                        Please attach a medical document.
+                        {/* 
+                            FILE UPLOAD COMPONENT GOES HERE
+                            Example: <Input type="file" {...form.register("document")} />
+                            This component needs to be implemented.
+                        */}
+                    </AlertDescription>
+                </Alert>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField

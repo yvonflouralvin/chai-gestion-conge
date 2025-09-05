@@ -21,7 +21,7 @@ import {
 import {
   Badge
 } from "@/components/ui/badge";
-import type { EmployeeWithCurrentContract, LeaveRequest, LeaveRequestStatus, LeaveType } from "@/types";
+import type { EmployeeWithCurrentContract, LeaveRequest, LeaveRequestStatus } from "@/types";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
@@ -33,11 +33,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
 import { Label } from "./ui/label";
+import { leaveTypes } from "@/lib/data";
 
 type LeaveHistoryProps = {
   requests: LeaveRequest[];
   employees: EmployeeWithCurrentContract[];
-  leaveTypes: LeaveType[];
   currentUser: EmployeeWithCurrentContract;
   updateRequestStatus: (
     requestId: string, 
@@ -54,7 +54,7 @@ type LeaveHistoryProps = {
 
 type StatusFilter = LeaveRequestStatus | "All";
 
-export function LeaveHistory({ requests, employees, leaveTypes, currentUser, updateRequestStatus, view }: LeaveHistoryProps) {
+export function LeaveHistory({ requests, employees, currentUser, updateRequestStatus, view }: LeaveHistoryProps) {
     const { toast } = useToast();
     const [rejectionReason, setRejectionReason] = useState("");
     const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
@@ -106,22 +106,21 @@ export function LeaveHistory({ requests, employees, leaveTypes, currentUser, upd
         let tooltipContent = null;
         if (status === 'Rejected') {
             const employee = employees.find(e => e.id === request.employeeId);
-            if (employee && employee.supervisorId) {
-                 const supervisor = employees.find(e => e.id === employee.supervisorId);
-                 if (supervisor && request.supervisorReason) {
-                     tooltipContent = <p><strong>{supervisor.name} (Supervisor):</strong> {request.supervisorReason}</p>
-                 }
+            if (employee) {
+                if (request.supervisorReason) {
+                    const supervisor = employees.find(e => e.id === employee.supervisorId);
+                    if (supervisor) {
+                        tooltipContent = <p><strong>{supervisor.name} (Supervisor):</strong> {request.supervisorReason}</p>
+                    }
+                } else if (request.managerReason) {
+                    const manager = employees.find(e => e.role === 'Manager');
+                     if(manager) {
+                        tooltipContent = <p><strong>{manager.name} (Manager):</strong> {request.managerReason}</p>
+                     }
+                }
             }
-            if (!tooltipContent && request.managerReason) {
-                const manager = employees.find(e => e.role === 'Manager' && e.id !== request.employeeId);
-                 if(manager) {
-                    tooltipContent = <p><strong>{manager.name} (Manager):</strong> {request.managerReason}</p>
-                 } else {
-                     tooltipContent = <p><strong>Manager:</strong> {request.managerReason}</p>
-                 }
-            }
-             if (!tooltipContent && request.supervisorReason) {
-                tooltipContent = <p>{request.supervisorReason}</p>
+             if (!tooltipContent && (request.supervisorReason || request.managerReason)) {
+                tooltipContent = <p>{request.supervisorReason || request.managerReason}</p>
             }
         } else if (request.comment) {
             tooltipContent = <p><strong>Comment:</strong> {request.comment}</p>

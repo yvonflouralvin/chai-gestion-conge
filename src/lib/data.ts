@@ -1,6 +1,6 @@
 
 import type { Employee, LeaveRequest, LeaveType } from "@/types";
-import { Briefcase, Heart, Plane, Baby } from "lucide-react";
+import { Briefcase, Heart, Plane, Baby, Stethoscope } from "lucide-react";
 
 export const initialEmployees: Employee[] = [
   {
@@ -74,6 +74,7 @@ export const leaveTypes: LeaveType[] = [
   { id: 1, name: "Annuel", icon: Plane },
   { id: 2, name: "Sick", icon: Heart },
   { id: 3, name: "Paternity", icon: Baby },
+  { id: 5, name: "Maternity", icon: Stethoscope },
   { id: 4, name: "Circonstance", icon: Briefcase, subTypes: ["Deuil", "Mariage", "Déménagement"] },
 ];
 

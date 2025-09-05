@@ -61,4 +61,6 @@ export type LeaveRequest = {
   managerReason: string;
   comment: string;
   submissionDate: Date;
+  documentUrl?: string | null;
 };
+
