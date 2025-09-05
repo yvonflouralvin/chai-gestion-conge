@@ -66,6 +66,7 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
   const { watch } = form;
   const startDate = watch("startDate");
   const endDate = watch("endDate");
+  const leaveTypeId = watch("leaveTypeId");
 
   useEffect(() => {
     if (startDate && endDate) {
@@ -88,10 +89,11 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
     let monthsWorked = (today.getFullYear() - contractStart.getFullYear()) * 12;
     monthsWorked -= contractStart.getMonth();
     monthsWorked += today.getMonth();
-    const accruedLeave = monthsWorked <= 0 ? 0 : monthsWorked * 1.25;
+    const accruedLeave = monthsWorked <= 0 ? 0 : monthsWorked * 1.75;
 
+    // Only "Annuel" leave (ID 1) affects the balance
     const takenLeave = leaveRequests
-      .filter(r => r.employeeId === currentUser.id && r.status === 'Approved')
+      .filter(r => r.employeeId === currentUser.id && r.status === 'Approved' && r.leaveTypeId === 1)
       .reduce((acc, req) => acc + calculateLeaveDays(req.startDate, req.endDate), 0);
       
     setAvailableLeaveDays(Math.floor(accruedLeave - takenLeave));
@@ -99,11 +101,12 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (leaveDays > availableLeaveDays) {
+    // Only check balance for Annual leave (ID 1)
+    if (parseInt(values.leaveTypeId, 10) === 1 && leaveDays > availableLeaveDays) {
       toast({
         variant: "destructive",
         title: "Insufficient Leave Days",
-        description: `You are requesting ${leaveDays} days, but you only have ${availableLeaveDays} available.`,
+        description: `You are requesting ${leaveDays} annual leave days, but you only have ${availableLeaveDays} available.`,
       });
       return;
     }
@@ -131,10 +134,13 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-6">
-            <div className="rounded-md border bg-muted/50 p-3 text-center">
-                <p className="text-sm text-muted-foreground">Available Leave Days</p>
-                <p className="text-2xl font-bold">{availableLeaveDays}</p>
-            </div>
+             {/* Only show available days for Annual leave requests or when no type is selected yet */}
+            {(leaveTypeId === "1" || !leaveTypeId) && (
+              <div className="rounded-md border bg-muted/50 p-3 text-center">
+                  <p className="text-sm text-muted-foreground">Available Annual Leave Days</p>
+                  <p className="text-2xl font-bold">{availableLeaveDays}</p>
+              </div>
+            )}
 
             <FormField
               control={form.control}
@@ -248,7 +254,7 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
               />
             </div>
             <div className="rounded-md border bg-muted/50 p-3 text-center">
-              <p className="text-sm text-muted-foreground">Total Leave Days</p>
+              <p className="text-sm text-muted-foreground">Total Leave Days in Request</p>
               <p className="text-2xl font-bold">{leaveDays}</p>
             </div>
           </CardContent>

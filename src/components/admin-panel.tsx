@@ -256,10 +256,11 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
     let monthsWorked = (today.getFullYear() - contractStart.getFullYear()) * 12;
     monthsWorked -= contractStart.getMonth();
     monthsWorked += today.getMonth();
-    const accruedLeave = monthsWorked <= 0 ? 0 : monthsWorked * 1.25;
+    const accruedLeave = monthsWorked <= 0 ? 0 : monthsWorked * 1.75;
 
+    // Only annual leave (ID 1) is deducted
     const takenLeave = leaveRequests
-      .filter(r => r.employeeId === employee.id && r.status === 'Approved')
+      .filter(r => r.employeeId === employee.id && r.status === 'Approved' && r.leaveTypeId === 1)
       .reduce((acc, req) => acc + calculateLeaveDays(req.startDate, req.endDate), 0);
       
     return Math.floor(accruedLeave - takenLeave);
@@ -404,7 +405,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                 <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead>Days Left</TableHead>
+                <TableHead>Annual Days Left</TableHead>
                 <TableHead>Contract Start</TableHead>
                 <TableHead>Contract End</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -519,5 +520,3 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
     </Card>
   );
 }
-
-    
