@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { EmployeeWithCurrentContract, LeaveRequest, LeaveType } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   leaveTypeId: z.string().min(1, { message: "Please select a leave type." }),
@@ -56,6 +57,7 @@ type LeaveRequestFormProps = {
 export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, leaveRequests }: LeaveRequestFormProps) {
   const [leaveDays, setLeaveDays] = useState(0);
   const [availableLeaveDays, setAvailableLeaveDays] = useState(0);
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -97,6 +99,15 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    if (leaveDays > availableLeaveDays) {
+      toast({
+        variant: "destructive",
+        title: "Insufficient Leave Days",
+        description: `You are requesting ${leaveDays} days, but you only have ${availableLeaveDays} available.`,
+      });
+      return;
+    }
+
     const newRequest = {
       employeeId: currentUser.id,
       leaveTypeId: parseInt(values.leaveTypeId, 10),
