@@ -57,6 +57,7 @@ type LeaveRequestFormProps = {
 export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, leaveRequests }: LeaveRequestFormProps) {
   const [leaveDays, setLeaveDays] = useState(0);
   const [availableLeaveDays, setAvailableLeaveDays] = useState(0);
+  const [availablePaternityDays, setAvailablePaternityDays] = useState(0);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -78,42 +79,68 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
   }, [startDate, endDate]);
   
   useEffect(() => {
+    // Annual Leave Calculation
     const firstContract = getFirstContract(currentUser);
     if (!firstContract) {
         setAvailableLeaveDays(0);
-        return;
+    } else {
+        const today = new Date();
+        const contractStart = new Date(firstContract.startDate);
+        let monthsWorked = (today.getFullYear() - contractStart.getFullYear()) * 12;
+        monthsWorked -= contractStart.getMonth();
+        monthsWorked += today.getMonth();
+        const accruedLeave = monthsWorked <= 0 ? 0 : monthsWorked * 1.75;
+
+        const takenLeave = leaveRequests
+          .filter(r => r.employeeId === currentUser.id && r.status === 'Approved' && r.leaveTypeId === 1)
+          .reduce((acc, req) => acc + calculateLeaveDays(req.startDate, req.endDate), 0);
+          
+        setAvailableLeaveDays(Math.floor(accruedLeave - takenLeave));
     }
 
-    const today = new Date();
-    const contractStart = new Date(firstContract.startDate);
-    let monthsWorked = (today.getFullYear() - contractStart.getFullYear()) * 12;
-    monthsWorked -= contractStart.getMonth();
-    monthsWorked += today.getMonth();
-    const accruedLeave = monthsWorked <= 0 ? 0 : monthsWorked * 1.75;
+    // Paternity Leave Calculation
+    const currentYear = new Date().getFullYear();
+    const takenPaternityLeave = leaveRequests
+        .filter(r => 
+            r.employeeId === currentUser.id && 
+            r.status === 'Approved' && 
+            r.leaveTypeId === 3 && // Paternity leave ID
+            r.startDate.getFullYear() === currentYear
+        )
+        .reduce((acc, req) => acc + calculateLeaveDays(req.startDate, req.endDate), 0);
+    
+    setAvailablePaternityDays(30 - takenPaternityLeave);
 
-    // Only "Annuel" leave (ID 1) affects the balance
-    const takenLeave = leaveRequests
-      .filter(r => r.employeeId === currentUser.id && r.status === 'Approved' && r.leaveTypeId === 1)
-      .reduce((acc, req) => acc + calculateLeaveDays(req.startDate, req.endDate), 0);
-      
-    setAvailableLeaveDays(Math.floor(accruedLeave - takenLeave));
   }, [currentUser, leaveRequests]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // Only check balance for Annual leave (ID 1)
-    if (parseInt(values.leaveTypeId, 10) === 1 && leaveDays > availableLeaveDays) {
+    const selectedLeaveTypeId = parseInt(values.leaveTypeId, 10);
+    
+    // Validation for Annual leave (ID 1)
+    if (selectedLeaveTypeId === 1 && leaveDays > availableLeaveDays) {
       toast({
         variant: "destructive",
-        title: "Insufficient Leave Days",
-        description: `You are requesting ${leaveDays} annual leave days, but you only have ${availableLeaveDays} available.`,
+        title: "Insufficient Annual Leave",
+        description: `You are requesting ${leaveDays} days, but you only have ${availableLeaveDays} available.`,
       });
       return;
     }
 
+    // Validation for Paternity leave (ID 3)
+    if (selectedLeaveTypeId === 3 && leaveDays > availablePaternityDays) {
+       toast({
+        variant: "destructive",
+        title: "Insufficient Paternity Leave",
+        description: `You are requesting ${leaveDays} days, but you only have ${availablePaternityDays} available for this year.`,
+      });
+      return;
+    }
+
+
     const newRequest = {
       employeeId: currentUser.id,
-      leaveTypeId: parseInt(values.leaveTypeId, 10),
+      leaveTypeId: selectedLeaveTypeId,
       startDate: values.startDate,
       endDate: values.endDate,
       status: "Pending Supervisor" as const,
@@ -124,6 +151,28 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
     addLeaveRequest(newRequest);
     form.reset();
   }
+  
+  const renderAvailableDays = () => {
+    const selectedLeaveTypeId = parseInt(leaveTypeId, 10);
+    if (selectedLeaveTypeId === 1 || !leaveTypeId) {
+        return (
+            <div className="rounded-md border bg-muted/50 p-3 text-center">
+                <p className="text-sm text-muted-foreground">Available Annual Leave Days</p>
+                <p className="text-2xl font-bold">{availableLeaveDays}</p>
+            </div>
+        )
+    }
+    if (selectedLeaveTypeId === 3) {
+         return (
+            <div className="rounded-md border bg-muted/50 p-3 text-center">
+                <p className="text-sm text-muted-foreground">Available Paternity Leave Days (This Year)</p>
+                <p className="text-2xl font-bold">{availablePaternityDays}</p>
+            </div>
+        )
+    }
+    return null;
+  }
+
 
   return (
     <Card>
@@ -134,13 +183,7 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-6">
-             {/* Only show available days for Annual leave requests or when no type is selected yet */}
-            {(leaveTypeId === "1" || !leaveTypeId) && (
-              <div className="rounded-md border bg-muted/50 p-3 text-center">
-                  <p className="text-sm text-muted-foreground">Available Annual Leave Days</p>
-                  <p className="text-2xl font-bold">{availableLeaveDays}</p>
-              </div>
-            )}
+            {renderAvailableDays()}
 
             <FormField
               control={form.control}
