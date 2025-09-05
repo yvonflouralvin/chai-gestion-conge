@@ -286,9 +286,10 @@ export function AdminPanel({ leaveRequests }: AdminPanelProps) {
             <TableHeader>
                 <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead className="hidden md:table-cell">Title</TableHead>
-                <TableHead className="hidden lg:table-cell">Days Left</TableHead>
-                <TableHead className="hidden lg:table-cell">Supervisor</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Days Left</TableHead>
+                <TableHead>Contract Start</TableHead>
+                <TableHead>Contract End</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>
@@ -299,9 +300,14 @@ export function AdminPanel({ leaveRequests }: AdminPanelProps) {
                         <div className="font-medium">{employee.name}</div>
                         <div className="text-sm text-muted-foreground md:hidden">{employee.title}</div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">{employee.title}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{getAvailableLeaveDays(employee)}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{getSupervisorName(employee.supervisorId as string | null)}</TableCell>
+                    <TableCell>{employee.title}</TableCell>
+                    <TableCell>{getAvailableLeaveDays(employee)}</TableCell>
+                    <TableCell>{format(employee.contractStartDate, "MMM d, yyyy")}</TableCell>
+                    <TableCell>
+                        {employee.contractEndDate
+                        ? format(employee.contractEndDate, "MMM d, yyyy")
+                        : "Ongoing"}
+                    </TableCell>
                     <TableCell className="text-right">
                     <Button variant="outline" size="icon" onClick={() => handleEditClick(employee)}>
                         <Edit className="h-4 w-4" />
