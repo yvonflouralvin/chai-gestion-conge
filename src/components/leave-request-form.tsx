@@ -183,6 +183,9 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
+                          disabled={(date) =>
+                            date < new Date(new Date().setHours(0, 0, 0, 0))
+                          }
                           initialFocus
                         />
                       </PopoverContent>
