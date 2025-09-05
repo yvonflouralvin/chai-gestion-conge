@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { cn, calculateLeaveDays } from "@/lib/utils";
+import { cn, calculateLeaveDays, getFirstContract } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -38,7 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Employee, LeaveRequest, LeaveType } from "@/types";
+import type { EmployeeWithCurrentContract, LeaveRequest, LeaveType } from "@/types";
 
 const formSchema = z.object({
   leaveTypeId: z.string().min(1, { message: "Please select a leave type." }),
@@ -48,7 +48,7 @@ const formSchema = z.object({
 
 type LeaveRequestFormProps = {
   leaveTypes: LeaveType[];
-  currentUser: Employee | (Omit<Employee, "id"> & { id: string });
+  currentUser: EmployeeWithCurrentContract;
   addLeaveRequest: (request: Omit<LeaveRequest, "id">) => void;
   leaveRequests: LeaveRequest[];
 };
@@ -75,8 +75,14 @@ export function LeaveRequestForm({ leaveTypes, currentUser, addLeaveRequest, lea
   }, [startDate, endDate]);
   
   useEffect(() => {
+    const firstContract = getFirstContract(currentUser);
+    if (!firstContract) {
+        setAvailableLeaveDays(0);
+        return;
+    }
+
     const today = new Date();
-    const contractStart = new Date(currentUser.contractStartDate);
+    const contractStart = new Date(firstContract.startDate);
     let monthsWorked = (today.getFullYear() - contractStart.getFullYear()) * 12;
     monthsWorked -= contractStart.getMonth();
     monthsWorked += today.getMonth();

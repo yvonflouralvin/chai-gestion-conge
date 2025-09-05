@@ -1,5 +1,5 @@
 
-import type { Employee, LeaveRequest, LeaveType } from "@/types";
+import type { EmployeeWithCurrentContract, LeaveRequest, LeaveType } from "@/types";
 import { format } from "date-fns";
 
 // This is a mock email service. In a real application, you would use a
@@ -27,8 +27,8 @@ function sendEmail(details: EmailDetails) {
 // --- Email for new request submitted ---
 type SubmittedEmailProps = {
     request: LeaveRequest;
-    employee: Employee;
-    supervisor: Employee;
+    employee: EmployeeWithCurrentContract;
+    supervisor: EmployeeWithCurrentContract;
     leaveTypes: LeaveType[];
 }
 export function sendLeaveRequestSubmittedEmail(props: SubmittedEmailProps) {
@@ -56,10 +56,10 @@ export function sendLeaveRequestSubmittedEmail(props: SubmittedEmailProps) {
 // --- Email for when a request is updated (approved/rejected) ---
 type UpdatedEmailProps = {
     request: LeaveRequest;
-    employee: Employee;
-    actor: Employee; // The person who made the change (supervisor or manager)
-    supervisor?: Employee;
-    manager?: Employee;
+    employee: EmployeeWithCurrentContract;
+    actor: EmployeeWithCurrentContract; // The person who made the change (supervisor or manager)
+    supervisor?: EmployeeWithCurrentContract;
+    manager?: EmployeeWithCurrentContract;
     leaveTypes: LeaveType[];
 }
 

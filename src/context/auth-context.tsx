@@ -5,18 +5,19 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import type { Employee, EmployeeRole } from '@/types';
+import type { Employee, EmployeeWithCurrentContract } from '@/types';
+import { processEmployee } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {
-  currentUser: (Omit<Employee, "id"> & { id: string }) | null;
+  currentUser: EmployeeWithCurrentContract | null;
   loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({ currentUser: null, loading: true });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<(Omit<Employee, "id"> & { id: string }) | null>(null);
+  const [currentUser, setCurrentUser] = useState<EmployeeWithCurrentContract | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,20 +26,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userDocRef = doc(db, 'users', user.uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setCurrentUser({
-            id: user.uid,
-            name: user.displayName || 'No Name',
-            title: userData.title,
-            team: userData.team,
-            avatar: user.photoURL || `https://placehold.co/40x40.png`,
-            supervisorId: userData.supervisorId,
-            role: userData.role as EmployeeRole,
-            contractType: userData.contractType,
-            contractStartDate: userData.contractStartDate.toDate(),
-            contractEndDate: userData.contractEndDate ? userData.contractEndDate.toDate() : null,
-            email: user.email!
+          const processedUser = processEmployee(userDoc.data(), user.uid);
+           setCurrentUser({
+            ...processedUser,
+            name: user.displayName || processedUser.name,
+            avatar: user.photoURL || processedUser.avatar,
           });
+        } else {
+            // Handle case where user exists in Auth but not in Firestore
+            setCurrentUser(null);
         }
       } else {
         setCurrentUser(null);

@@ -21,7 +21,7 @@ import {
 import {
   Badge
 } from "@/components/ui/badge";
-import type { Employee, LeaveRequest, LeaveRequestStatus, LeaveType } from "@/types";
+import type { EmployeeWithCurrentContract, LeaveRequest, LeaveRequestStatus, LeaveType } from "@/types";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
@@ -33,9 +33,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 
 type LeaveHistoryProps = {
   requests: LeaveRequest[];
-  employees: Employee[];
+  employees: EmployeeWithCurrentContract[];
   leaveTypes: LeaveType[];
-  currentUser: Employee | (Omit<Employee, "id"> & { id: string });
+  currentUser: EmployeeWithCurrentContract;
   updateRequestStatus: (requestId: string, status: LeaveRequestStatus, reason?: string) => void;
   view: "personal" | "approvals" | "all"; 
 };

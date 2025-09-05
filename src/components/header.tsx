@@ -1,12 +1,12 @@
 
 "use client";
 
-import type { Employee } from "@/types";
+import type { EmployeeWithCurrentContract } from "@/types";
 import { UserNav } from "@/components/user-nav";
 import { Leaf } from "lucide-react";
 
 type HeaderProps = {
-  currentUser: Employee | (Omit<Employee, "id"> & { id: string });
+  currentUser: EmployeeWithCurrentContract;
 };
 
 export function Header({ currentUser }: HeaderProps) {

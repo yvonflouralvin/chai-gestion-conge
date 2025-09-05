@@ -2,6 +2,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { eachDayOfInterval, isSunday, isSameDay } from 'date-fns';
+import type { Employee, Contract, EmployeeWithCurrentContract } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -27,4 +28,51 @@ export function calculateLeaveDays(startDate: Date | undefined, endDate: Date | 
   });
 
   return workingDays.length;
+}
+
+export function getCurrentContract(employee: Employee | EmployeeWithCurrentContract): Contract | null {
+    if (!employee.contracts || employee.contracts.length === 0) {
+        return null;
+    }
+    // Sort contracts by start date in descending order to get the most recent one first
+    const sortedContracts = [...employee.contracts].sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
+    return sortedContracts[0];
+}
+
+export function getFirstContract(employee: Employee | EmployeeWithCurrentContract): Contract | null {
+    if (!employee.contracts || employee.contracts.length === 0) {
+        return null;
+    }
+    // Sort contracts by start date in ascending order to get the first one
+    const sortedContracts = [...employee.contracts].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+    return sortedContracts[0];
+}
+
+export function processEmployee(docData: any, docId: string): EmployeeWithCurrentContract {
+    const contracts = (docData.contracts || []).map((c: any) => ({
+      ...c,
+      startDate: c.startDate.toDate(),
+      endDate: c.endDate ? c.endDate.toDate() : null,
+    }));
+
+    const employee: Employee = {
+        id: docId,
+        name: docData.name,
+        email: docData.email,
+        avatar: docData.avatar || `https://placehold.co/40x40.png`,
+        supervisorId: docData.supervisorId,
+        role: docData.role as Employee['role'],
+        contracts: contracts,
+    }
+
+    const currentContract = getCurrentContract(employee);
+
+    return {
+        ...employee,
+        title: currentContract?.title || "N/A",
+        team: currentContract?.team || "N/A",
+        contractType: currentContract?.contractType || "Contrat-Staff",
+        contractStartDate: currentContract?.startDate || new Date(),
+        contractEndDate: currentContract?.endDate || null,
+    };
 }

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import type { Employee } from "@/types";
+import type { EmployeeWithCurrentContract } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 type UserNavProps = {
-  currentUser: Employee | (Omit<Employee, "id"> & { id: string });
+  currentUser: EmployeeWithCurrentContract;
 };
 
 export function UserNav({ currentUser }: UserNavProps) {

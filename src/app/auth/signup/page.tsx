@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast";
-import type { EmployeeRole } from "@/types";
+import type { EmployeeRole, Contract } from "@/types";
 import { Loader2 } from "lucide-react";
 
 export default function SignUpPage() {
@@ -39,18 +39,20 @@ export default function SignUpPage() {
       
       await updateProfile(user, { displayName: name });
 
-      // TODO: This should be in a server-side function for security
+      const firstContract: Contract = {
+        title: "Employee", 
+        team: "Unassigned",
+        contractType: "Contrat-Staff",
+        startDate: new Date(),
+        endDate: null,
+      };
+
       await setDoc(doc(db, "users", user.uid), {
         name: name,
         email: email,
         role: "Employee" as EmployeeRole,
-        // Add default/empty values for other fields for now
-        title: "Employee", 
-        team: "Unassigned",
         supervisorId: null,
-        contractType: "Full-time",
-        contractStartDate: new Date(),
-        contractEndDate: null,
+        contracts: [firstContract],
       });
 
       router.push("/");

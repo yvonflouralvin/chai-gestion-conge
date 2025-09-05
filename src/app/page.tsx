@@ -10,18 +10,19 @@ import { LeaveRequestForm } from "@/components/leave-request-form";
 import { LeaveHistory } from "@/components/leave-history";
 import { AdminPanel } from "@/components/admin-panel";
 import { leaveTypes } from "@/lib/data";
-import type { Employee, LeaveRequest, LeaveRequestStatus } from "@/types";
+import type { Employee, LeaveRequest, LeaveRequestStatus, EmployeeWithCurrentContract } from "@/types";
 import { useAuth } from "@/context/auth-context";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sendLeaveRequestSubmittedEmail, sendLeaveRequestUpdatedEmail } from "@/lib/email";
+import { processEmployee } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { currentUser, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<EmployeeWithCurrentContract[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,22 +32,7 @@ export default function DashboardPage() {
     try {
       // Fetch Employees
       const usersSnapshot = await getDocs(collection(db, "users"));
-      const usersData: Employee[] = usersSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          name: data.name,
-          email: data.email,
-          title: data.title,
-          team: data.team,
-          avatar: data.avatar || `https://placehold.co/40x40.png`,
-          supervisorId: data.supervisorId,
-          role: data.role as Employee['role'],
-          contractType: data.contractType as Employee['contractType'],
-          contractStartDate: data.contractStartDate.toDate(),
-          contractEndDate: data.contractEndDate ? data.contractEndDate.toDate() : null,
-        };
-      });
+      const usersData = usersSnapshot.docs.map(doc => processEmployee(doc.data(), doc.id));
       setEmployees(usersData);
 
       // Fetch Leave Requests
@@ -178,7 +164,7 @@ export default function DashboardPage() {
             </TabsList>
           </div>
           <TabsContent value="employees" className="mt-4">
-            <AdminPanel leaveRequests={leaveRequests} />
+            <AdminPanel leaveRequests={leaveRequests} employees={employees} onEmployeesUpdate={fetchAllData} />
           </TabsContent>
           <TabsContent value="requests" className="mt-4">
             <LeaveHistory 

@@ -1,21 +1,38 @@
 import type { LucideIcon } from "lucide-react";
 
 export type EmployeeRole = "Employee" | "Supervisor" | "Manager" | "Admin";
-export type ContractType = "Full-time" | "Part-time" | "Contract";
+export type ContractType =
+  | "Contrat-Staff"
+  | "Contrat-Independant"
+  | "Contract";
+
+export type Contract = {
+  title: string;
+  team: string;
+  contractType: ContractType;
+  startDate: Date;
+  endDate: Date | null;
+};
 
 export type Employee = {
   id: string;
   name: string;
   email: string;
-  title: string;
-  team: string;
   avatar: string;
   supervisorId: string | null;
   role: EmployeeRole;
+  contracts: Contract[];
+};
+
+// Derived properties for convenience
+export type EmployeeWithCurrentContract = Employee & {
+  title: string;
+  team: string;
   contractType: ContractType;
   contractStartDate: Date;
   contractEndDate: Date | null;
 };
+
 
 export type LeaveType = {
   id: number;

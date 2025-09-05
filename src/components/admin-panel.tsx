@@ -7,12 +7,12 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { format } from "date-fns"
 import { CalendarIcon, Edit, UserPlus, X, Loader2 } from "lucide-react"
-import { collection, getDocs, doc, setDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, setDoc, updateDoc, arrayUnion } from "firebase/firestore";
 import { createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 
-import type { Employee, ContractType, EmployeeRole, LeaveRequest } from "@/types"
-import { cn, calculateLeaveDays } from "@/lib/utils"
+import type { EmployeeWithCurrentContract, Contract, ContractType, EmployeeRole, LeaveRequest } from "@/types"
+import { cn, calculateLeaveDays, getCurrentContract, getFirstContract } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 
 import { Button } from "@/components/ui/button"
@@ -24,104 +24,71 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { useAuth } from "@/context/auth-context"
 
 const employeeSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Please enter a valid email." }),
+  role: z.enum(["Employee", "Supervisor", "Manager", "Admin"]),
+  supervisorId: z.string().nullable(),
+});
+
+const contractSchema = z.object({
   title: z.string().min(2, { message: "Title is required." }),
   team: z.string().min(2, { message: "Team is required." }),
-  role: z.enum(["Employee", "Supervisor", "Manager", "Admin"]),
   contractType: z.enum(["Contrat-Staff", "Contrat-Independant", "Contract"]),
-  supervisorId: z.string().nullable(),
-  contractStartDate: z.date({ required_error: "A start date is required." }),
-  contractEndDate: z.date().nullable(),
+  startDate: z.date({ required_error: "A start date is required." }),
+  endDate: z.date().nullable(),
 });
 
 type AdminPanelProps = {
     leaveRequests: LeaveRequest[];
+    employees: EmployeeWithCurrentContract[];
+    onEmployeesUpdate: () => void;
 };
 
-export function AdminPanel({ leaveRequests }: AdminPanelProps) {
+export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: AdminPanelProps) {
   const { toast } = useToast();
   const { currentUser } = useAuth();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isFormSubmitting, setIsFormSubmitting] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [editingEmployee, setEditingEmployee] = useState<EmployeeWithCurrentContract | null>(null);
 
-  const form = useForm<z.infer<typeof employeeSchema>>({
+  const employeeForm = useForm<z.infer<typeof employeeSchema>>({
     resolver: zodResolver(employeeSchema),
   });
 
-  const fetchEmployees = async () => {
-    setLoading(true);
-    try {
-      const querySnapshot = await getDocs(collection(db, "users"));
-      const usersData: Employee[] = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          name: data.name,
-          email: data.email,
-          title: data.title,
-          team: data.team,
-          avatar: data.avatar || `https://placehold.co/40x40.png`,
-          supervisorId: data.supervisorId,
-          role: data.role as EmployeeRole,
-          contractType: data.contractType as ContractType,
-          contractStartDate: data.contractStartDate.toDate(),
-          contractEndDate: data.contractEndDate ? data.contractEndDate.toDate() : null,
-        };
-      });
-      setEmployees(usersData);
-    } catch (error: any) {
-      console.error("Error fetching employees: ", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to fetch employees from Firestore.",
-      });
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
+  const contractForm = useForm<z.infer<typeof contractSchema>>({
+    resolver: zodResolver(contractSchema),
+  });
 
   useEffect(() => {
     if (editingEmployee) {
-      form.reset({
-        name: editingEmployee.name,
-        email: editingEmployee.email,
-        title: editingEmployee.title,
-        team: editingEmployee.team,
-        role: editingEmployee.role,
-        contractType: editingEmployee.contractType,
-        supervisorId: editingEmployee.supervisorId ? String(editingEmployee.supervisorId) : null,
-        contractStartDate: editingEmployee.contractStartDate,
-        contractEndDate: editingEmployee.contractEndDate,
-      });
+        employeeForm.reset({
+            name: editingEmployee.name,
+            email: editingEmployee.email,
+            role: editingEmployee.role,
+            supervisorId: editingEmployee.supervisorId ? String(editingEmployee.supervisorId) : null,
+        });
+        const currentContract = getCurrentContract(editingEmployee);
+        if (currentContract) {
+            contractForm.reset({
+                title: currentContract.title,
+                team: currentContract.team,
+                contractType: currentContract.contractType,
+                startDate: currentContract.startDate,
+                endDate: currentContract.endDate,
+            });
+        }
     } else {
-      // Default values for the "Add Employee" form
-      form.reset({
-        name: "",
-        email: "",
-        title: "",
-        team: "",
-        role: "Employee",
-        contractType: "Contrat-Staff",
-        supervisorId: null,
-        contractStartDate: new Date(),
-        contractEndDate: null,
-      });
+        employeeForm.reset({ name: "", email: "", role: "Employee", supervisorId: null });
+        contractForm.reset({ title: "", team: "", contractType: "Contrat-Staff", startDate: new Date(), endDate: null });
     }
-  }, [editingEmployee, isAddDialogOpen, form]);
+  }, [editingEmployee, isAddDialogOpen, employeeForm, contractForm]);
 
-  const handleEditClick = (employee: Employee) => {
+  const handleEditClick = (employee: EmployeeWithCurrentContract) => {
     setEditingEmployee(employee);
     setIsEditDialogOpen(true);
   };
@@ -130,7 +97,8 @@ export function AdminPanel({ leaveRequests }: AdminPanelProps) {
     setEditingEmployee(null);
     setIsEditDialogOpen(false);
     setIsAddDialogOpen(false);
-    form.reset();
+    employeeForm.reset();
+    contractForm.reset();
   }
 
   const getSupervisorIdValue = (values: z.infer<typeof employeeSchema>) => {
@@ -151,34 +119,43 @@ export function AdminPanel({ leaveRequests }: AdminPanelProps) {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, values.email, tempPassword);
-      const user = userCredential.user;
+        const contractValues = await contractForm.trigger() ? contractForm.getValues() : null;
+        if (!contractValues) {
+            setIsFormSubmitting(false);
+            return;
+        }
 
-      await setDoc(doc(db, "users", user.uid), {
-        name: values.name,
-        email: values.email,
-        title: values.title,
-        team: values.team,
-        role: values.role,
-        contractType: values.contractType,
-        supervisorId: getSupervisorIdValue(values),
-        contractStartDate: values.contractStartDate,
-        contractEndDate: values.contractEndDate,
-        avatar: `https://placehold.co/40x40.png`
-      });
+        const userCredential = await createUserWithEmailAndPassword(auth, values.email, tempPassword);
+        const user = userCredential.user;
 
-      await sendPasswordResetEmail(auth, values.email);
-      
-       await auth.updateCurrentUser(adminUser);
+        const newContract: Contract = {
+            title: contractValues.title,
+            team: contractValues.team,
+            contractType: contractValues.contractType,
+            startDate: contractValues.startDate,
+            endDate: contractValues.endDate,
+        };
 
+        await setDoc(doc(db, "users", user.uid), {
+            name: values.name,
+            email: values.email,
+            role: values.role,
+            supervisorId: getSupervisorIdValue(values),
+            avatar: `https://placehold.co/40x40.png`,
+            contracts: [newContract],
+        });
 
-      toast({
-          title: "Employee Added",
-          description: `${values.name} has been added and a setup email has been sent.`,
-      });
+        await sendPasswordResetEmail(auth, values.email);
+        
+        await auth.updateCurrentUser(adminUser);
 
-      fetchEmployees();
-      handleDialogClose();
+        toast({
+            title: "Employee Added",
+            description: `${values.name} has been added and a setup email has been sent.`,
+        });
+
+        onEmployeesUpdate();
+        handleDialogClose();
 
     } catch (error: any) {
       console.error("Error adding employee: ", error);
@@ -199,16 +176,11 @@ export function AdminPanel({ leaveRequests }: AdminPanelProps) {
     if (!editingEmployee) return;
     setIsFormSubmitting(true);
     try {
-        const employeeRef = doc(db, "users", editingEmployee.id.toString());
+        const employeeRef = doc(db, "users", editingEmployee.id);
         await updateDoc(employeeRef, {
             name: values.name,
-            title: values.title,
-            team: values.team,
             role: values.role,
-            contractType: values.contractType,
             supervisorId: getSupervisorIdValue(values),
-            contractStartDate: values.contractStartDate,
-            contractEndDate: values.contractEndDate,
         });
 
         toast({
@@ -216,7 +188,7 @@ export function AdminPanel({ leaveRequests }: AdminPanelProps) {
             description: `${values.name}'s information has been successfully updated.`,
         });
         
-        fetchEmployees();
+        onEmployeesUpdate();
         handleDialogClose();
 
     } catch (error) {
@@ -231,15 +203,55 @@ export function AdminPanel({ leaveRequests }: AdminPanelProps) {
     }
   }
 
+  async function handleAddContract(values: z.infer<typeof contractSchema>) {
+      if (!editingEmployee) return;
+      setIsFormSubmitting(true);
+      try {
+        const newContract: Contract = {
+            title: values.title,
+            team: values.team,
+            contractType: values.contractType,
+            startDate: values.startDate,
+            endDate: values.endDate
+        };
+
+        const employeeRef = doc(db, "users", editingEmployee.id);
+        await updateDoc(employeeRef, {
+            contracts: arrayUnion(newContract)
+        });
+
+         toast({
+            title: "Contract Added",
+            description: `A new contract has been added for ${editingEmployee.name}.`,
+        });
+
+        onEmployeesUpdate();
+        handleDialogClose();
+
+      } catch (error) {
+          console.error("Error adding contract: ", error);
+          toast({
+            variant: "destructive",
+            title: "Failed to Add Contract",
+            description: "Could not add new contract.",
+        });
+      } finally {
+          setIsFormSubmitting(false);
+      }
+  }
+
   const getSupervisorName = (supervisorId: string | null) => {
     if (!supervisorId) return "N/A";
     const supervisor = employees.find(e => e.id === supervisorId);
     return supervisor?.name || "Unknown";
   };
   
-  const getAvailableLeaveDays = (employee: Employee) => {
+  const getAvailableLeaveDays = (employee: EmployeeWithCurrentContract) => {
+    const firstContract = getFirstContract(employee);
+    if (!firstContract) return 0;
+
     const today = new Date();
-    const contractStart = new Date(employee.contractStartDate);
+    const contractStart = new Date(firstContract.startDate);
     let monthsWorked = (today.getFullYear() - contractStart.getFullYear()) * 12;
     monthsWorked -= contractStart.getMonth();
     monthsWorked += today.getMonth();
@@ -254,19 +266,123 @@ export function AdminPanel({ leaveRequests }: AdminPanelProps) {
 
   const potentialSupervisors = employees.filter(e => e.id !== editingEmployee?.id && (e.role === 'Supervisor' || e.role === 'Manager' || e.role === 'Admin'));
 
-  if (loading) {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Employee Management</CardTitle>
-                <CardDescription>View and manage employee details.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center items-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </CardContent>
-        </Card>
-    );
-  }
+  const FormFields = ({ isContract, isEdit }: { isContract?: boolean, isEdit?: boolean }) => (
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {!isContract && <>
+            <FormField control={employeeForm.control} name="name" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+            )} />
+            <FormField control={employeeForm.control} name="email" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl><Input {...field} type="email" disabled={isEdit} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+            )} />
+          </>}
+
+          <FormField control={contractForm.control} name="title" render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Job Title</FormLabel>
+                  <FormControl><Input {...field} disabled={isContract && isEdit} /></FormControl>
+                  <FormMessage />
+              </FormItem>
+          )} />
+          <FormField control={contractForm.control} name="team" render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Team</FormLabel>
+                  <FormControl><Input {...field} disabled={isContract && isEdit} /></FormControl>
+                  <FormMessage />
+              </FormItem>
+          )} />
+
+          {!isContract && <>
+            <FormField control={employeeForm.control} name="role" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                            <SelectItem value="Employee">Employee</SelectItem>
+                            <SelectItem value="Supervisor">Supervisor</SelectItem>
+                            <SelectItem value="Manager">Manager</SelectItem>
+                            <SelectItem value="Admin">Admin</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+            )} />
+            <FormField control={employeeForm.control} name="supervisorId" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Supervisor</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || 'na'}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select a supervisor" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                            <SelectItem value="na">N/A</SelectItem>
+                            {potentialSupervisors.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+            )} />
+          </>}
+          
+          <FormField control={contractForm.control} name="contractType" render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Contract Type</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isContract && isEdit}>
+                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>
+                          <SelectItem value="Contrat-Staff">Contrat Staff</SelectItem>
+                          <SelectItem value="Contrat-Independant">Contrat Independant</SelectItem>
+                          <SelectItem value="Contract">Contrat de stage</SelectItem>
+                      </SelectContent>
+                  </Select>
+                  <FormMessage />
+              </FormItem>
+          )} />
+          
+          <FormField control={contractForm.control} name="startDate" render={({ field }) => (
+              <FormItem className="flex flex-col">
+                  <FormLabel>Contract Start Date</FormLabel>
+                  <Popover><PopoverTrigger asChild><FormControl>
+                      <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled={isContract && isEdit}>
+                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                  </FormControl></PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                  </PopoverContent></Popover>
+                  <FormMessage />
+              </FormItem>
+          )} />
+          <FormField control={contractForm.control} name="endDate" render={({ field }) => (
+              <FormItem className="flex flex-col">
+                  <FormLabel>Contract End Date (optional)</FormLabel>
+                  <Popover><PopoverTrigger asChild><FormControl>
+                      <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled={isContract && isEdit}>
+                          {field.value ? format(field.value, "PPP") : <span>Ongoing</span>}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                  </FormControl></PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                      <div className="p-2 flex justify-end">
+                          <Button variant="ghost" size="sm" onClick={() => field.onChange(null)}>Clear</Button>
+                      </div>
+                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} />
+                  </PopoverContent></Popover>
+                  <FormMessage />
+              </FormItem>
+          )} />
+      </div>
+    </>
+  );
 
   return (
     <Card>
@@ -325,121 +441,77 @@ export function AdminPanel({ leaveRequests }: AdminPanelProps) {
             <DialogHeader>
               <DialogTitle>{isAddDialogOpen ? "Add New Employee" : `Edit Employee: ${editingEmployee?.name}`}</DialogTitle>
             </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(isAddDialogOpen ? handleAddEmployee : handleUpdateEmployee)} className="grid gap-4 py-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="name" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Full Name</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                     <FormField control={form.control} name="email" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl><Input {...field} type="email" disabled={!isAddDialogOpen} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="title" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Job Title</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="team" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Team</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="role" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Role</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    <SelectItem value="Employee">Employee</SelectItem>
-                                    <SelectItem value="Supervisor">Supervisor</SelectItem>
-                                    <SelectItem value="Manager">Manager</SelectItem>
-                                    <SelectItem value="Admin">Admin</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="contractType" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Contract Type</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    <SelectItem value="Contrat-Staff">Contrat Staff</SelectItem>
-                                    <SelectItem value="Contrat-Independant">Contrat Independant</SelectItem>
-                                    <SelectItem value="Contract">Contrat de stage</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="supervisorId" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Supervisor</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || 'na'}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Select a supervisor" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    <SelectItem value="na">N/A</SelectItem>
-                                    {potentialSupervisors.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="contractStartDate" render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                            <FormLabel>Contract Start Date</FormLabel>
-                            <Popover><PopoverTrigger asChild><FormControl>
-                                <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                            </FormControl></PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                            </PopoverContent></Popover>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="contractEndDate" render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                            <FormLabel>Contract End Date (optional)</FormLabel>
-                            <Popover><PopoverTrigger asChild><FormControl>
-                                <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                    {field.value ? format(field.value, "PPP") : <span>Ongoing</span>}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                            </FormControl></PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <div className="p-2 flex justify-end">
-                                    <Button variant="ghost" size="sm" onClick={() => field.onChange(null)}>Clear</Button>
-                                </div>
-                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} />
-                            </PopoverContent></Popover>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                </div>
-                <DialogFooter>
-                    <Button type="button" variant="outline" onClick={handleDialogClose}>Cancel</Button>
-                    <Button type="submit" disabled={isFormSubmitting}>
-                         {isFormSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save Changes"}
-                    </Button>
-                </DialogFooter>
-              </form>
-            </Form>
+            {isEditDialogOpen && (
+                <Tabs defaultValue="employee">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="employee">Employee Details</TabsTrigger>
+                        <TabsTrigger value="contract">New Contract</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="employee">
+                        <Form {...employeeForm}>
+                            <form onSubmit={employeeForm.handleSubmit(handleUpdateEmployee)} className="space-y-4 py-4">
+                                <FormFields isEdit />
+                                <DialogFooter>
+                                    <Button type="button" variant="outline" onClick={handleDialogClose}>Cancel</Button>
+                                    <Button type="submit" disabled={isFormSubmitting}>
+                                        {isFormSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save Changes"}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </Form>
+
+                        <Accordion type="single" collapsible className="w-full mt-4">
+                          <AccordionItem value="item-1">
+                            <AccordionTrigger>View Contract History</AccordionTrigger>
+                            <AccordionContent>
+                                {editingEmployee && editingEmployee.contracts.length > 0 ? (
+                                    <div className="space-y-4 p-2 border rounded-md">
+                                        {[...editingEmployee.contracts].sort((a,b) => b.startDate.getTime() - a.startDate.getTime()).map((contract, index) => (
+                                            <div key={index} className="text-sm">
+                                                <p><strong>Title:</strong> {contract.title}</p>
+                                                <p><strong>Team:</strong> {contract.team}</p>
+                                                <p><strong>Type:</strong> {contract.contractType}</p>
+                                                <p><strong>Period:</strong> {format(contract.startDate, "MMM d, yyyy")} - {contract.endDate ? format(contract.endDate, "MMM d, yyyy") : 'Ongoing'}</p>
+                                                {index < editingEmployee.contracts.length - 1 && <hr className="my-2"/>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : <p>No contract history.</p>}
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
+                    </TabsContent>
+                    <TabsContent value="contract">
+                        <Form {...contractForm}>
+                            <form onSubmit={contractForm.handleSubmit(handleAddContract)} className="space-y-4 py-4">
+                                <p className="text-sm text-muted-foreground">Add a new contract for this employee. The previous contract will be archived.</p>
+                                <FormFields isContract />
+                                <DialogFooter>
+                                    <Button type="button" variant="outline" onClick={handleDialogClose}>Cancel</Button>
+                                    <Button type="submit" disabled={isFormSubmitting}>
+                                        {isFormSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Add New Contract"}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </Form>
+                    </TabsContent>
+                </Tabs>
+            )}
+            {isAddDialogOpen && (
+                <Form {...employeeForm}>
+                    <form onSubmit={employeeForm.handleSubmit(handleAddEmployee)} className="space-y-4 py-4">
+                        <Form {...contractForm}>
+                           <FormFields />
+                        </Form>
+                         <DialogFooter>
+                            <Button type="button" variant="outline" onClick={handleDialogClose}>Cancel</Button>
+                            <Button type="submit" disabled={isFormSubmitting}>
+                                {isFormSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Add Employee"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            )}
           </DialogContent>
         </Dialog>
       </CardContent>
