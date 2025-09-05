@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/context/auth-context"
 
 const employeeSchema = z.object({
@@ -518,3 +519,5 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
     </Card>
   );
 }
+
+    
