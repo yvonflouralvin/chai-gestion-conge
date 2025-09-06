@@ -20,7 +20,7 @@ export type Employee = {
   name: string;
   email: string;
   avatar: string;
-  supervisorId: string | null| number;
+  supervisorId: string | null ;
   role: EmployeeRole;
   contracts: Contract[] | null;
   title: string | null;

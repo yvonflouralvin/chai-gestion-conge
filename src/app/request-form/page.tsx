@@ -6,6 +6,8 @@ import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { sendLeaveRequestSubmittedEmail } from "@/lib/email";
 import { leaveTypes } from "@/lib/data";
+import { getEmployeeById } from "@/lib/employee";
+import { LeaveRequestForm } from "@/components/leave-request-form";
 
 export default function RequestForm(){
 
@@ -14,7 +16,7 @@ export default function RequestForm(){
 
     const addLeaveRequest = async (newRequestData: Omit<LeaveRequest, "id">) => {
         if (!currentUser) return;
-        try {
+        try {   
             const docRef = await addDoc(collection(db, "leave-requests"), newRequestData);
             const newRequest = { id: docRef.id, ...newRequestData };
             //setLeaveRequests(prev => [...prev, newRequest]);
@@ -22,6 +24,15 @@ export default function RequestForm(){
     
             // Email notification logic
             if (currentUser.supervisorId) {
+                getEmployeeById(currentUser.supervisorId).then(supervisor => {
+                    if (supervisor) {
+                        sendLeaveRequestSubmittedEmail({
+                            request: newRequest,
+                            employee: currentUser,
+                            leaveTypes: leaveTypes,
+                        });
+                    }
+                })
                 await sendLeaveRequestSubmittedEmail({
                     request: newRequest,
                     employee: currentUser,
@@ -37,6 +48,13 @@ export default function RequestForm(){
 
 
     return <div>
-
+            {
+                currentUser && 
+                <LeaveRequestForm 
+                    currentUser={currentUser}
+                    addLeaveRequest={addLeaveRequest}
+                    leaveRequests={leaveRequests}
+                />
+            }
         </div>
 }
