@@ -71,6 +71,7 @@ export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }
   const [leaveDays, setLeaveDays] = useState(0);
   const [availableLeaveDays, setAvailableLeaveDays] = useState(0);
   const [availablePaternityDays, setAvailablePaternityDays] = useState(0);
+  const [availableMaternityDays, setAvailableMaternityDays] = useState(0);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -97,6 +98,8 @@ export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }
   }, [startDate, endDate]);
   
   useEffect(() => {
+    const currentYear = new Date().getFullYear();
+
     // Annual Leave Calculation
     const firstContract = getFirstContract(currentUser);
     if (!firstContract) {
@@ -117,7 +120,6 @@ export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }
     }
 
     // Paternity Leave Calculation
-    const currentYear = new Date().getFullYear();
     const takenPaternityLeave = leaveRequests
         .filter(r => 
             r.employeeId === currentUser.id && 
@@ -128,6 +130,18 @@ export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }
         .reduce((acc, req) => acc + calculateLeaveDays(req.startDate, req.endDate), 0);
     
     setAvailablePaternityDays(30 - takenPaternityLeave);
+
+    // Maternity Leave Calculation
+    const takenMaternityLeave = leaveRequests
+        .filter(r => 
+            r.employeeId === currentUser.id && 
+            r.status === 'Approved' && 
+            r.leaveTypeId === 5 && // Maternity leave ID
+            r.startDate.getFullYear() === currentYear
+        )
+        .reduce((acc, req) => acc + calculateLeaveDays(req.startDate, req.endDate), 0);
+    
+    setAvailableMaternityDays(90 - takenMaternityLeave);
 
   }, [currentUser, leaveRequests]);
 
@@ -151,6 +165,16 @@ export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }
         variant: "destructive",
         title: "Insufficient Paternity Leave",
         description: `You are requesting ${leaveDays} days, but you only have ${availablePaternityDays} available for this year.`,
+      });
+      return;
+    }
+
+    // Validation for Maternity leave (ID 5)
+    if (selectedLeaveTypeId === 5 && leaveDays > availableMaternityDays) {
+       toast({
+        variant: "destructive",
+        title: "Insufficient Maternity Leave",
+        description: `You are requesting ${leaveDays} days, but you only have ${availableMaternityDays} available for this year.`,
       });
       return;
     }
@@ -205,11 +229,11 @@ export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }
             </div>
         )
     }
-     if (selectedLeaveTypeId === 5) { // Maternity Leave
+     if (selectedLeaveTypeId === 5) {
          return (
             <div className="rounded-md border bg-muted/50 p-3 text-center">
-                <p className="text-sm text-muted-foreground">Maternity Leave Entitlement</p>
-                <p className="text-2xl font-bold">90 Days</p>
+                <p className="text-sm text-muted-foreground">Available Maternity Leave Days (This Year)</p>
+                <p className="text-2xl font-bold">{availableMaternityDays}</p>
             </div>
         )
     }
@@ -397,3 +421,5 @@ export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }
     </Card>
   );
 }
+
+    
