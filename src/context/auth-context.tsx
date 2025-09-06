@@ -10,7 +10,7 @@ import { processEmployee } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {
-  currentUser: EmployeeWithCurrentContract | null;
+  currentUser: EmployeeWithCurrentContract | null; // Renommé pour plus de clarté
   loading: boolean;
 }
 
@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           const processedUser = processEmployee(userDoc.data(), user.uid);
-           setCurrentUser({
+          setCurrentUser({
             ...processedUser,
             name: user.displayName || processedUser.name,
             avatar: user.photoURL || processedUser.avatar,

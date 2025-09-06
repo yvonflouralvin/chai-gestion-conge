@@ -1,6 +1,7 @@
 
 import type { EmployeeWithCurrentContract, LeaveRequest, LeaveType } from "@/types";
 import { format } from "date-fns";
+import { getEmployeeById } from "./employee";
 
 // This is a mock email service. In a real application, you would use a
 // service like SendGrid, Mailgun, or Firebase Extensions to send emails.
@@ -12,7 +13,7 @@ type EmailDetails = {
     body: string;
 }
 
-function sendEmail(details: EmailDetails) {
+async function sendEmail(details: EmailDetails) {
     console.log("--- Sending Email ---");
     console.log(`To: ${details.to}`);
     console.log(`Subject: ${details.subject}`);
@@ -28,11 +29,22 @@ function sendEmail(details: EmailDetails) {
 type SubmittedEmailProps = {
     request: LeaveRequest;
     employee: EmployeeWithCurrentContract;
-    supervisor: EmployeeWithCurrentContract;
     leaveTypes: LeaveType[];
 }
-export function sendLeaveRequestSubmittedEmail(props: SubmittedEmailProps) {
-    const { request, employee, supervisor, leaveTypes } = props;
+export async function sendLeaveRequestSubmittedEmail(props: SubmittedEmailProps) {
+    const { request, employee, leaveTypes } = props;
+
+    if (!employee.supervisorId) {
+        console.log(`Employee ${employee.name} has no supervisor. No email sent.`);
+        return;
+    }
+
+    const supervisor = await getEmployeeById(employee.supervisorId as string);
+    if (!supervisor) {
+        console.error(`Supervisor with id ${employee.supervisorId} not found.`);
+        return;
+    }
+    
     const leaveTypeName = leaveTypes.find(lt => lt.id === request.leaveTypeId)?.name || 'Unknown';
     const formattedStartDate = format(request.startDate, "PPP");
     const formattedEndDate = format(request.endDate, "PPP");
@@ -49,22 +61,26 @@ export function sendLeaveRequestSubmittedEmail(props: SubmittedEmailProps) {
         <p>You can review this request in the EasyLeave dashboard.</p>
     `;
 
-    sendEmail({ to: supervisor.email, subject, body });
+    await sendEmail({ to: supervisor.email, subject, body });
 }
 
 
 // --- Email for when a request is updated (approved/rejected) ---
 type UpdatedEmailProps = {
     request: LeaveRequest;
-    employee: EmployeeWithCurrentContract;
     actor: EmployeeWithCurrentContract; // The person who made the change (supervisor or manager)
-    supervisor?: EmployeeWithCurrentContract;
-    manager?: EmployeeWithCurrentContract;
     leaveTypes: LeaveType[];
 }
 
-export function sendLeaveRequestUpdatedEmail(props: UpdatedEmailProps) {
-    const { request, employee, actor, supervisor, manager, leaveTypes } = props;
+export async function sendLeaveRequestUpdatedEmail(props: UpdatedEmailProps) {
+    const { request, actor, leaveTypes } = props;
+
+    const employee = await getEmployeeById(request.employeeId);
+    if (!employee) {
+        console.error(`Employee with id ${request.employeeId} not found for email notification.`);
+        return;
+    }
+
     const leaveTypeName = leaveTypes.find(lt => lt.id === request.leaveTypeId)?.name || 'Unknown';
     const formattedStartDate = format(request.startDate, "PPP");
     const formattedEndDate = format(request.endDate, "PPP");
@@ -72,24 +88,31 @@ export function sendLeaveRequestUpdatedEmail(props: UpdatedEmailProps) {
     const approvalCommentHtml = request.comment ? `<p><strong>Comment from ${actor.name}:</strong> ${request.comment}</p>` : '';
 
     // Scenario 1: Supervisor approves, notify Manager
-    if (request.status === 'Pending Manager' && manager) {
-        const subject = `Leave Request for ${employee.name} needs your approval`;
-        const body = `
-            <p>Hello ${manager.name},</p>
-            <p>A leave request from ${employee.name} has been approved by their supervisor, ${actor.name}, and is now awaiting your final approval.</p>
-            <ul>
-                <li><strong>Type:</strong> ${leaveTypeName}</li>
-                <li><strong>Start Date:</strong> ${formattedStartDate}</li>
-                <li><strong>End Date:</strong> ${formattedEndDate}</li>
-            </ul>
-            ${approvalCommentHtml}
-        `;
-        sendEmail({ to: manager.email, subject, body });
+    if (request.status === 'Pending Manager') {
+        const managerQuery = (await getDocs(query(collection(db, "users"), where("role", "==", "Manager"))));
+        const managerDoc = managerQuery.docs[0];
+        
+        if (managerDoc) {
+            const manager = processEmployee(managerDoc.data(), managerDoc.id);
+            const subject = `Leave Request for ${employee.name} needs your approval`;
+            const body = `
+                <p>Hello ${manager.name},</p>
+                <p>A leave request from ${employee.name} has been approved by their supervisor, ${actor.name}, and is now awaiting your final approval.</p>
+                <ul>
+                    <li><strong>Type:</strong> ${leaveTypeName}</li>
+                    <li><strong>Start Date:</strong> ${formattedStartDate}</li>
+                    <li><strong>End Date:</strong> ${formattedEndDate}</li>
+                </ul>
+                ${approvalCommentHtml}
+            `;
+            await sendEmail({ to: manager.email, subject, body });
+        }
+
 
         // Also notify the employee of the progress
         const employeeSubject = `Update on your leave request`;
         const employeeBody = `<p>Hello ${employee.name},</p><p>Your leave request has been approved by your supervisor and is now pending final approval from the manager.</p>${approvalCommentHtml}`;
-        sendEmail({ to: employee.email, subject: employeeSubject, body: employeeBody });
+        await sendEmail({ to: employee.email, subject: employeeSubject, body: employeeBody });
     }
 
     // Scenario 2: Manager gives final approval, notify Employee
@@ -105,7 +128,7 @@ export function sendLeaveRequestUpdatedEmail(props: UpdatedEmailProps) {
             </ul>
              ${approvalCommentHtml}
         `;
-        sendEmail({ to: employee.email, subject, body });
+        await sendEmail({ to: employee.email, subject, body });
     }
 
     // Scenario 3: Request is rejected, notify Employee
@@ -117,8 +140,6 @@ export function sendLeaveRequestUpdatedEmail(props: UpdatedEmailProps) {
             <p>Unfortunately, your recent leave request has been rejected by ${actor.name}.</p>
             <p><strong>Reason:</strong> ${reason}</p>
         `;
-        sendEmail({ to: employee.email, subject, body });
+        await sendEmail({ to: employee.email, subject, body });
     }
 }
-
-    

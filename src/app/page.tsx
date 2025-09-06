@@ -79,15 +79,11 @@ export default function DashboardPage() {
         toast({ title: "Request Submitted", description: "Your leave request has been submitted for approval." });
 
         // Email notification logic
-        const supervisor = employees.find(e => e.id === currentUser.supervisorId);
-        if (supervisor) {
-            sendLeaveRequestSubmittedEmail({
-                request: newRequest,
-                employee: currentUser,
-                supervisor: supervisor,
-                leaveTypes: leaveTypes,
-            });
-        }
+        await sendLeaveRequestSubmittedEmail({
+            request: newRequest,
+            employee: currentUser,
+            leaveTypes: leaveTypes,
+        });
 
     } catch (error) {
         console.error("Error adding leave request: ", error);
@@ -138,21 +134,11 @@ export default function DashboardPage() {
         toast({ title: "Request Updated", description: "The leave request status has been updated." });
 
         // Email notification logic
-        const employee = employees.find(e => e.id === updatedRequest.employeeId);
-        if (!employee) return;
-
-        const supervisor = employees.find(e => e.id === employee.supervisorId);
-        const manager = employees.find(e => e.role === 'Manager'); // Simplified: assumes one manager
-
-        sendLeaveRequestUpdatedEmail({
+        await sendLeaveRequestUpdatedEmail({
             request: updatedRequest,
-            employee: employee,
             actor: currentUser,
-            supervisor: supervisor,
-            manager: manager,
             leaveTypes: leaveTypes,
-        })
-
+        });
 
     } catch (error) {
         console.error("Error updating request status: ", error);

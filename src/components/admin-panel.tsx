@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { format } from "date-fns"
 import { CalendarIcon, Edit, UserPlus, X, Loader2 } from "lucide-react"
-import { collection, doc, setDoc, updateDoc, arrayUnion } from "firebase/firestore";
+import { collection, doc, setDoc, updateDoc, arrayUnion, DocumentReference } from "firebase/firestore";
 import { createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 
@@ -177,7 +177,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
     if (!editingEmployee) return;
     setIsFormSubmitting(true);
     try {
-        const employeeRef = doc(db, "users", editingEmployee.id);
+        const employeeRef: DocumentReference = doc(db, "users", editingEmployee.id);
         await updateDoc(employeeRef, {
             name: values.name,
             role: values.role,

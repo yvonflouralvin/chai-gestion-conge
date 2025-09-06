@@ -16,13 +16,18 @@ export type Contract = {
 };
 
 export type Employee = {
-  id: string;
+  id: string|number;
   name: string;
   email: string;
   avatar: string;
-  supervisorId: string | null;
+  supervisorId: string | null| number;
   role: EmployeeRole;
-  contracts: Contract[];
+  contracts: Contract[] | null;
+  title: string | null;
+  team : string | null ;
+  contractType : string | null ;
+  contractStartDate : Date | null ;
+  contractEndDate : Date | null ;
 };
 
 // Derived properties for convenience
