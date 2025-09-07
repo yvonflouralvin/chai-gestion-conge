@@ -1,7 +1,7 @@
 
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { eachDayOfInterval, isSunday, isSameDay } from 'date-fns';
+import { eachDayOfInterval, isSunday, isSameDay, differenceInMonths } from 'date-fns';
 import type { Employee, Contract, EmployeeWithCurrentContract } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
@@ -29,6 +29,14 @@ export function calculateLeaveDays(startDate: Date | undefined, endDate: Date | 
 
   return workingDays.length;
 }
+
+export function calculateContractLeaveDays(contract: Contract): number {
+    const today = new Date();
+    const endDate = contract.endDate || today; // If no end date, calculate up to today
+    const months = differenceInMonths(endDate, contract.startDate);
+    return Math.floor((months > 0 ? months : 0) * 1.75);
+}
+
 
 export function getCurrentContract(employee: Employee | EmployeeWithCurrentContract): Contract | null {
     if (!employee.contracts || employee.contracts.length === 0) {
@@ -63,6 +71,7 @@ export function processEmployee(docData: any, docId: string): EmployeeWithCurren
         supervisorId: docData.supervisorId,
         role: docData.role as Employee['role'],
         contracts: contracts,
+        availableLeaveDays: docData.availableLeaveDays || 0,
     }
 
     const currentContract = getCurrentContract(employee);

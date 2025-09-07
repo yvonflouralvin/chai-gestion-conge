@@ -23,11 +23,7 @@ export type Employee = {
   supervisorId: string | null ;
   role: EmployeeRole;
   contracts: Contract[] | null;
-  title: string | null;
-  team : string | null ;
-  contractType : string | null ;
-  contractStartDate : Date | null ;
-  contractEndDate : Date | null ;
+  availableLeaveDays: number;
 };
 
 // Derived properties for convenience
@@ -69,4 +65,3 @@ export type LeaveRequest = {
   submissionDate: Date;
   documentUrl?: string | null;
 };
-

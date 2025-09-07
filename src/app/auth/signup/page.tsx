@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast";
 import type { EmployeeRole, Contract } from "@/types";
 import { Loader2 } from "lucide-react";
+import { calculateContractLeaveDays } from "@/lib/utils";
 
 export default function SignUpPage() {
   const [name, setName] = useState("");
@@ -47,12 +48,15 @@ export default function SignUpPage() {
         endDate: null,
       };
 
+      const availableLeaveDays = calculateContractLeaveDays(firstContract);
+
       await setDoc(doc(db, "users", user.uid), {
         name: name,
         email: email,
         role: "Employee" as EmployeeRole,
         supervisorId: null,
         contracts: [firstContract],
+        availableLeaveDays: availableLeaveDays,
       });
 
       router.push("/");

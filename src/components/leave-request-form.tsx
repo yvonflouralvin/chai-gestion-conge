@@ -69,7 +69,6 @@ type LeaveRequestFormProps = {
 
 export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }: LeaveRequestFormProps) {
   const [leaveDays, setLeaveDays] = useState(0);
-  const [availableLeaveDays, setAvailableLeaveDays] = useState(0);
   const [availablePaternityDays, setAvailablePaternityDays] = useState(0);
   const [availableMaternityDays, setAvailableMaternityDays] = useState(0);
   const { toast } = useToast();
@@ -99,25 +98,6 @@ export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }
   
   useEffect(() => {
     const currentYear = new Date().getFullYear();
-
-    // Annual Leave Calculation
-    const firstContract = getFirstContract(currentUser);
-    if (!firstContract) {
-        setAvailableLeaveDays(0);
-    } else {
-        const today = new Date();
-        const contractStart = new Date(firstContract.startDate);
-        let monthsWorked = (today.getFullYear() - contractStart.getFullYear()) * 12;
-        monthsWorked -= contractStart.getMonth();
-        monthsWorked += today.getMonth();
-        const accruedLeave = monthsWorked <= 0 ? 0 : monthsWorked * 1.75;
-
-        const takenLeave = leaveRequests
-          .filter(r => r.employeeId === currentUser.id && r.status === 'Approved' && r.leaveTypeId === 1)
-          .reduce((acc, req) => acc + calculateLeaveDays(req.startDate, req.endDate), 0);
-          
-        setAvailableLeaveDays(Math.floor(accruedLeave - takenLeave));
-    }
 
     // Paternity Leave Calculation
     const takenPaternityLeave = leaveRequests
@@ -150,11 +130,11 @@ export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }
     const selectedLeaveTypeId = parseInt(values.leaveTypeId, 10);
     
     // Validation for Annual leave (ID 1)
-    if (selectedLeaveTypeId === 1 && leaveDays > availableLeaveDays) {
+    if (selectedLeaveTypeId === 1 && leaveDays > currentUser.availableLeaveDays) {
       toast({
         variant: "destructive",
         title: "Insufficient Annual Leave",
-        description: `You are requesting ${leaveDays} days, but you only have ${availableLeaveDays} available.`,
+        description: `You are requesting ${leaveDays} days, but you only have ${currentUser.availableLeaveDays} available.`,
       });
       return;
     }
@@ -217,7 +197,7 @@ export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }
         return (
             <div className="rounded-md border bg-muted/50 p-3 text-center">
                 <p className="text-sm text-muted-foreground">Available Annual Leave Days</p>
-                <p className="text-2xl font-bold">{availableLeaveDays}</p>
+                <p className="text-2xl font-bold">{currentUser.availableLeaveDays}</p>
             </div>
         )
     }
@@ -421,5 +401,3 @@ export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }
     </Card>
   );
 }
-
-    

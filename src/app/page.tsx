@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, addDoc, doc, updateDoc, query, where, getDoc } from "firebase/firestore";
+import { collection, getDocs, addDoc, doc, updateDoc, query, where, getDoc, runTransaction } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Header } from "@/components/header";
 import { LeaveRequestForm } from "@/components/leave-request-form";
@@ -16,7 +16,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sendLeaveRequestSubmittedEmail, sendLeaveRequestUpdatedEmail } from "@/lib/email";
-import { processEmployee } from "@/lib/utils";
+import { calculateLeaveDays, processEmployee } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { currentUser, loading: authLoading } = useAuth();
@@ -125,6 +125,24 @@ export default function DashboardPage() {
         if (details?.startDate) updateData.startDate = details.startDate;
         if (details?.endDate) updateData.endDate = details.endDate;
 
+        // If the request is finally approved, deduct leave days
+        if (status === 'Approved' && requestToUpdate.leaveTypeId === 1) { // Only for Annual leave
+            const employeeRef = doc(db, "users", requestToUpdate.employeeId);
+            const daysToDeduct = calculateLeaveDays(details?.startDate, details?.endDate);
+
+            await runTransaction(db, async (transaction) => {
+                const employeeDoc = await transaction.get(employeeRef);
+                if (!employeeDoc.exists()) {
+                    throw "Employee not found!";
+                }
+
+                const currentLeaveDays = employeeDoc.data().availableLeaveDays || 0;
+                const newLeaveDays = currentLeaveDays - daysToDeduct;
+                transaction.update(employeeRef, { availableLeaveDays: newLeaveDays });
+            });
+        }
+
+
         await updateDoc(requestRef, updateData);
         
         const updatedRequest = { ...requestToUpdate, ...updateData };
@@ -132,6 +150,11 @@ export default function DashboardPage() {
             prev.map(req => req.id === requestId ? updatedRequest : req)
         );
         toast({ title: "Request Updated", description: "The leave request status has been updated." });
+
+        // Refresh employee data to reflect new leave balance
+        if (status === 'Approved' || status === 'Rejected') {
+          await fetchAllData();
+        }
 
         // Email notification logic
         await sendLeaveRequestUpdatedEmail({
@@ -166,7 +189,6 @@ export default function DashboardPage() {
               view="all"
               requests={leaveRequests}
               employees={employees}
-              //leaveTypes={leaveTypes}
               currentUser={currentUser} 
               updateRequestStatus={updateRequestStatus}
             />
@@ -190,14 +212,12 @@ export default function DashboardPage() {
                 view="approvals"
                 requests={leaveRequests}
                 employees={employees}
-                //leaveTypes={leaveTypes}
                 currentUser={currentUser} 
                 updateRequestStatus={updateRequestStatus}
               />
           </TabsContent>
           <TabsContent value="request" className="mt-4">
             <LeaveRequestForm 
-                //leaveTypes={leaveTypes} 
                 currentUser={currentUser}
                 addLeaveRequest={addLeaveRequest}
                 leaveRequests={leaveRequests}
@@ -208,7 +228,6 @@ export default function DashboardPage() {
                 view="personal"
                 requests={leaveRequests}
                 employees={employees}
-                //leaveTypes={leaveTypes}
                 currentUser={currentUser} 
                 updateRequestStatus={updateRequestStatus}
               />
@@ -233,7 +252,6 @@ export default function DashboardPage() {
                 view="all"
                 requests={leaveRequests}
                 employees={employees}
-                //leaveTypes={leaveTypes}
                 currentUser={currentUser} 
                 updateRequestStatus={updateRequestStatus}
               />
@@ -243,14 +261,12 @@ export default function DashboardPage() {
                 view="approvals"
                 requests={leaveRequests}
                 employees={employees}
-                //leaveTypes={leaveTypes}
                 currentUser={currentUser} 
                 updateRequestStatus={updateRequestStatus}
               />
           </TabsContent>
           <TabsContent value="request" className="mt-4">
             <LeaveRequestForm 
-                //leaveTypes={leaveTypes} 
                 currentUser={currentUser}
                 addLeaveRequest={addLeaveRequest}
                 leaveRequests={leaveRequests}
@@ -261,7 +277,6 @@ export default function DashboardPage() {
                 view="personal"
                 requests={leaveRequests}
                 employees={employees}
-                //leaveTypes={leaveTypes}
                 currentUser={currentUser} 
                 updateRequestStatus={updateRequestStatus}
               />
@@ -281,7 +296,6 @@ export default function DashboardPage() {
           </div>
           <TabsContent value="request" className="mt-4">
             <LeaveRequestForm 
-                //leaveTypes={leaveTypes} 
                 currentUser={currentUser}
                 addLeaveRequest={addLeaveRequest}
                 leaveRequests={leaveRequests}
@@ -292,7 +306,6 @@ export default function DashboardPage() {
                 view={currentUser.role === 'Manager' ? 'approvals' : 'personal'}
                 requests={leaveRequests}
                 employees={employees}
-                //leaveTypes={leaveTypes}
                 currentUser={currentUser} 
                 updateRequestStatus={updateRequestStatus}
               />

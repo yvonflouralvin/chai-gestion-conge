@@ -7,12 +7,12 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { format } from "date-fns"
 import { CalendarIcon, Edit, UserPlus, X, Loader2 } from "lucide-react"
-import { collection, doc, setDoc, updateDoc, arrayUnion, DocumentReference } from "firebase/firestore";
+import { collection, doc, setDoc, updateDoc, arrayUnion, DocumentReference, runTransaction } from "firebase/firestore";
 import { createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 
 import type { EmployeeWithCurrentContract, Contract, ContractType, EmployeeRole, LeaveRequest } from "@/types"
-import { cn, calculateLeaveDays, getCurrentContract, getFirstContract } from "@/lib/utils"
+import { cn, calculateLeaveDays, getCurrentContract, getFirstContract, calculateContractLeaveDays } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 
 import { Button } from "@/components/ui/button"
@@ -137,6 +137,8 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
             endDate: contractValues.endDate,
         };
 
+        const availableLeaveDays = calculateContractLeaveDays(newContract);
+
         await setDoc(doc(db, "users", user.uid), {
             name: values.name,
             email: values.email,
@@ -144,6 +146,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
             supervisorId: getSupervisorIdValue(values),
             avatar: `https://placehold.co/40x40.png`,
             contracts: [newContract],
+            availableLeaveDays: availableLeaveDays,
         });
 
         await sendPasswordResetEmail(auth, values.email);
@@ -216,14 +219,29 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
             endDate: values.endDate
         };
 
+        const newLeaveDays = calculateContractLeaveDays(newContract);
+
         const employeeRef = doc(db, "users", editingEmployee.id);
-        await updateDoc(employeeRef, {
-            contracts: arrayUnion(newContract)
+
+        await runTransaction(db, async (transaction) => {
+            const employeeDoc = await transaction.get(employeeRef);
+            if (!employeeDoc.exists()) {
+                throw "Employee does not exist!";
+            }
+
+            const currentLeaveDays = employeeDoc.data().availableLeaveDays || 0;
+            const updatedLeaveDays = currentLeaveDays + newLeaveDays;
+
+            transaction.update(employeeRef, {
+                contracts: arrayUnion(newContract),
+                availableLeaveDays: updatedLeaveDays
+            });
         });
+
 
          toast({
             title: "Contract Added",
-            description: `A new contract has been added for ${editingEmployee.name}.`,
+            description: `A new contract has been added for ${editingEmployee.name}. ${newLeaveDays} leave days were added to their balance.`,
         });
 
         onEmployeesUpdate();
@@ -245,25 +263,6 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
     if (!supervisorId) return "N/A";
     const supervisor = employees.find(e => e.id === supervisorId);
     return supervisor?.name || "Unknown";
-  };
-  
-  const getAvailableLeaveDays = (employee: EmployeeWithCurrentContract) => {
-    const firstContract = getFirstContract(employee);
-    if (!firstContract) return 0;
-
-    const today = new Date();
-    const contractStart = new Date(firstContract.startDate);
-    let monthsWorked = (today.getFullYear() - contractStart.getFullYear()) * 12;
-    monthsWorked -= contractStart.getMonth();
-    monthsWorked += today.getMonth();
-    const accruedLeave = monthsWorked <= 0 ? 0 : monthsWorked * 1.75;
-
-    // Only annual leave (ID 1) is deducted
-    const takenLeave = leaveRequests
-      .filter(r => r.employeeId === employee.id && r.status === 'Approved' && r.leaveTypeId === 1)
-      .reduce((acc, req) => acc + calculateLeaveDays(req.startDate, req.endDate), 0);
-      
-    return Math.floor(accruedLeave - takenLeave);
   };
 
   const potentialSupervisors = employees.filter(e => e.id !== editingEmployee?.id && (e.role === 'Supervisor' || e.role === 'Manager' || e.role === 'Admin' || e.role === "HR"));
@@ -420,7 +419,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                         <div className="text-sm text-muted-foreground md:hidden">{employee.title}</div>
                     </TableCell>
                     <TableCell>{employee.title}</TableCell>
-                    <TableCell>{getAvailableLeaveDays(employee)}</TableCell>
+                    <TableCell>{employee.availableLeaveDays}</TableCell>
                     <TableCell>{format(employee.contractStartDate, "MMM d, yyyy")}</TableCell>
                     <TableCell>
                         {employee.contractEndDate
