@@ -229,8 +229,9 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                 throw "Employee does not exist!";
             }
 
+            // Calculate the difference in leave days
             const currentLeaveDays = employeeDoc.data().availableLeaveDays || 0;
-            const updatedLeaveDays = currentLeaveDays + newLeaveDays;
+            const updatedLeaveDays =  newLeaveDays + currentLeaveDays ;
 
             transaction.update(employeeRef, {
                 contracts: arrayUnion(newContract),
