@@ -49,7 +49,7 @@ type LeaveHistoryProps = {
         endDate?: Date;
     }
   ) => void;
-  view: "personal" | "approvals" | "all"; 
+  view: "personal" | "approvals" | "all" ; 
 };
 
 type StatusFilter = LeaveRequestStatus | "All";
@@ -132,6 +132,7 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                 case 'Rejected': return <Badge variant="destructive">Rejected</Badge>;
                 case 'Pending Supervisor': return <Badge variant="secondary" className="bg-yellow-400 text-black hover:bg-yellow-500">Pending Supervisor</Badge>;
                 case 'Pending Manager': return <Badge variant="secondary" className="bg-orange-400 text-black hover:bg-orange-500">Pending Manager</Badge>;
+                case 'Pending HR': return <Badge variant="secondary" className="bg-orange-400 text-black hover:bg-orange-500">Pending HR</Badge>;
             }
         }
         
@@ -183,6 +184,13 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                 emptyStateMessage = "No pending requests.";
                 showFilters = true;
             }
+            else if (currentUser.role === 'HR') {
+                title = "Employee Leave Waiting for Approvals";
+                description = "Review and act on pending leave requests.";
+                baseRequests = requests.filter(r => r.status === 'Pending HR');
+                emptyStateMessage = "No pending requests.";
+                showFilters = true;
+            }
             break;
         case 'all':
             title = "All Leave Requests";
@@ -202,7 +210,15 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
     const handleApprove = async () => {
         if (!selectedRequest || !approvalStartDate || !approvalEndDate) return;
         setIsSubmitting(true);
-        const nextStatus = currentUser.role === 'Supervisor' ? 'Pending Manager' : 'Approved';
+
+        const role = currentUser.role;
+
+        const _nextStatus = (role : string)=> {
+            if(role === "HR") return "Pending Supervisor";
+            return role === 'Supervisor' ? 'Pending Manager' : 'Approved';
+        } 
+
+        const nextStatus = _nextStatus(role);
         
         await updateRequestStatus(selectedRequest.id, nextStatus, {
             comment: approvalComment,
@@ -242,6 +258,7 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                     <SelectContent>
                         <SelectItem value="All">All Statuses</SelectItem>
                         <SelectItem value="Pending Supervisor">Pending Supervisor</SelectItem>
+                        <SelectItem value="Pending HR">Pending HR</SelectItem>
                         <SelectItem value="Pending Manager">Pending Manager</SelectItem>
                         <SelectItem value="Approved">Approved</SelectItem>
                         <SelectItem value="Rejected">Rejected</SelectItem>

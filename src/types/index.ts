@@ -1,7 +1,7 @@
 
 import type { LucideIcon } from "lucide-react";
 
-export type EmployeeRole = "Employee" | "Supervisor" | "Manager" | "Admin";
+export type EmployeeRole = "Employee" | "Supervisor" | "Manager" | "Admin" | "HR";
 export type ContractType =
   | "Contrat-Staff"
   | "Contrat-Independant"
@@ -16,7 +16,7 @@ export type Contract = {
 };
 
 export type Employee = {
-  id: string|number;
+  id: string ;
   name: string;
   email: string;
   avatar: string;
@@ -51,6 +51,7 @@ export type LeaveType = {
 export type LeaveRequestStatus =
   | "Pending Supervisor"
   | "Pending Manager"
+  | "Pending HR"
   | "Approved"
   | "Rejected";
 

@@ -199,7 +199,7 @@ export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }
       circumstanceType: (values.circumstanceType as CircumstanceType) || null,
       startDate: values.startDate,
       endDate: values.endDate,
-      status: "Pending Supervisor" as const,
+      status: selectedLeaveTypeId === 4 ? "Pending HR" : "Pending Supervisor" as const,
       supervisorReason: "",
       managerReason: "",
       comment: "",

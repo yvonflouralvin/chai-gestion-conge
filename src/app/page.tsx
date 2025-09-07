@@ -166,7 +166,7 @@ export default function DashboardPage() {
               view="all"
               requests={leaveRequests}
               employees={employees}
-              leaveTypes={leaveTypes}
+              //leaveTypes={leaveTypes}
               currentUser={currentUser} 
               updateRequestStatus={updateRequestStatus}
             />
@@ -190,14 +190,14 @@ export default function DashboardPage() {
                 view="approvals"
                 requests={leaveRequests}
                 employees={employees}
-                leaveTypes={leaveTypes}
+                //leaveTypes={leaveTypes}
                 currentUser={currentUser} 
                 updateRequestStatus={updateRequestStatus}
               />
           </TabsContent>
           <TabsContent value="request" className="mt-4">
             <LeaveRequestForm 
-                leaveTypes={leaveTypes} 
+                //leaveTypes={leaveTypes} 
                 currentUser={currentUser}
                 addLeaveRequest={addLeaveRequest}
                 leaveRequests={leaveRequests}
@@ -208,7 +208,7 @@ export default function DashboardPage() {
                 view="personal"
                 requests={leaveRequests}
                 employees={employees}
-                leaveTypes={leaveTypes}
+                //leaveTypes={leaveTypes}
                 currentUser={currentUser} 
                 updateRequestStatus={updateRequestStatus}
               />
@@ -217,6 +217,59 @@ export default function DashboardPage() {
       );
     }
     
+    if (currentUser.role === 'HR') {
+      return (
+        <Tabs defaultValue="requests">
+          <div className="flex items-center">
+            <TabsList>
+               <TabsTrigger value="requests">Leave Requests</TabsTrigger>
+               <TabsTrigger value="hr">Waiting Approvals</TabsTrigger>
+               <TabsTrigger value="request">New Request</TabsTrigger>
+               <TabsTrigger value="history">My History</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="requests" className="mt-4">
+             <LeaveHistory 
+                view="all"
+                requests={leaveRequests}
+                employees={employees}
+                //leaveTypes={leaveTypes}
+                currentUser={currentUser} 
+                updateRequestStatus={updateRequestStatus}
+              />
+          </TabsContent>
+          <TabsContent value="hr" className="mt-4">
+             <LeaveHistory 
+                view="approvals"
+                requests={leaveRequests}
+                employees={employees}
+                //leaveTypes={leaveTypes}
+                currentUser={currentUser} 
+                updateRequestStatus={updateRequestStatus}
+              />
+          </TabsContent>
+          <TabsContent value="request" className="mt-4">
+            <LeaveRequestForm 
+                //leaveTypes={leaveTypes} 
+                currentUser={currentUser}
+                addLeaveRequest={addLeaveRequest}
+                leaveRequests={leaveRequests}
+              />
+          </TabsContent>
+          <TabsContent value="history" className="mt-4">
+             <LeaveHistory 
+                view="personal"
+                requests={leaveRequests}
+                employees={employees}
+                //leaveTypes={leaveTypes}
+                currentUser={currentUser} 
+                updateRequestStatus={updateRequestStatus}
+              />
+          </TabsContent>
+        </Tabs>
+      );
+    }
+
     // For Employee and Manager
     return (
         <Tabs defaultValue="request">
@@ -228,7 +281,7 @@ export default function DashboardPage() {
           </div>
           <TabsContent value="request" className="mt-4">
             <LeaveRequestForm 
-                leaveTypes={leaveTypes} 
+                //leaveTypes={leaveTypes} 
                 currentUser={currentUser}
                 addLeaveRequest={addLeaveRequest}
                 leaveRequests={leaveRequests}
@@ -239,7 +292,7 @@ export default function DashboardPage() {
                 view={currentUser.role === 'Manager' ? 'approvals' : 'personal'}
                 requests={leaveRequests}
                 employees={employees}
-                leaveTypes={leaveTypes}
+                //leaveTypes={leaveTypes}
                 currentUser={currentUser} 
                 updateRequestStatus={updateRequestStatus}
               />

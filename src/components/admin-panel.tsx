@@ -31,7 +31,7 @@ import { useAuth } from "@/context/auth-context"
 const employeeSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Please enter a valid email." }),
-  role: z.enum(["Employee", "Supervisor", "Manager", "Admin"]),
+  role: z.enum(["Employee", "Supervisor", "Manager", "Admin", "HR"]),
   supervisorId: z.string().nullable(),
 });
 
@@ -266,7 +266,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
     return Math.floor(accruedLeave - takenLeave);
   };
 
-  const potentialSupervisors = employees.filter(e => e.id !== editingEmployee?.id && (e.role === 'Supervisor' || e.role === 'Manager' || e.role === 'Admin'));
+  const potentialSupervisors = employees.filter(e => e.id !== editingEmployee?.id && (e.role === 'Supervisor' || e.role === 'Manager' || e.role === 'Admin' || e.role === "HR"));
 
   const FormFields = ({ isContract, isEdit }: { isContract?: boolean, isEdit?: boolean }) => (
     <>
@@ -314,6 +314,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                             <SelectItem value="Supervisor">Supervisor</SelectItem>
                             <SelectItem value="Manager">Manager</SelectItem>
                             <SelectItem value="Admin">Admin</SelectItem>
+                            <SelectItem value="HR">HR</SelectItem>
                         </SelectContent>
                     </Select>
                     <FormMessage />
@@ -466,7 +467,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                           <AccordionItem value="item-1">
                             <AccordionTrigger>View Contract History</AccordionTrigger>
                             <AccordionContent>
-                                {editingEmployee && editingEmployee.contracts.length > 0 ? (
+                                {editingEmployee && editingEmployee.contracts != null && editingEmployee.contracts.length > 0 ? (
                                     <div className="space-y-4 p-2 border rounded-md">
                                         {[...editingEmployee.contracts].sort((a,b) => b.startDate.getTime() - a.startDate.getTime()).map((contract, index) => (
                                             <div key={index} className="text-sm">
