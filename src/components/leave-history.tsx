@@ -28,12 +28,13 @@ import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { calculateLeaveDays, cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { Info, Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import { Info, Calendar as CalendarIcon, Loader2, History } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
 import { Label } from "./ui/label";
 import { leaveTypes } from "@/lib/data";
+import { LeaveRequestHistoryDialog } from "./leave-request-history-dialog";
 
 type LeaveHistoryProps = {
   requests: LeaveRequest[];
@@ -66,6 +67,10 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
     const [approvalStartDate, setApprovalStartDate] = useState<Date | undefined>();
     const [approvalEndDate, setApprovalEndDate] = useState<Date | undefined>();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // State for history dialog
+    const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
+    const [selectedHistoryRequest, setSelectedHistoryRequest] = useState<LeaveRequest | null>(null);
 
     useEffect(() => {
         if (selectedRequest) {
@@ -277,7 +282,7 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
               <TableHead className="hidden sm:table-cell">Submitted</TableHead>
               <TableHead className="text-center">Days</TableHead>
               <TableHead>Status</TableHead>
-              {showActionsColumn && <TableHead className="text-right">Actions</TableHead>}
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -293,6 +298,17 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                   {showActionsColumn && 
                     <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
+                            <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => {
+                                    setSelectedHistoryRequest(request);
+                                    setIsHistoryDialogOpen(true);
+                                }}
+                            >
+                                <History className="h-4 w-4 mr-1" />
+                                Historique
+                            </Button>
                             {
                                 (request.status === 'Approved' || request.status === 'Rejected' || (currentUser.role === 'Supervisor' && request.status !== 'Pending Supervisor') || (currentUser.role === 'Manager' && request.status !== 'Pending Manager')) == false ?
                                <>
@@ -329,11 +345,26 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                         </div>
                     </TableCell>
                   }
+                  {!showActionsColumn && (
+                    <TableCell className="text-right">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedHistoryRequest(request);
+                          setIsHistoryDialogOpen(true);
+                        }}
+                      >
+                        <History className="h-4 w-4 mr-1" />
+                        Historique
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             ) : (
                 <TableRow>
-                    <TableCell colSpan={ (showEmployeeColumn ? 1 : 0) + (showActionsColumn ? 1 : 0) + 5 } className="text-center h-24">
+                    <TableCell colSpan={ (showEmployeeColumn ? 1 : 0) + 6 } className="text-center h-24">
                         {emptyStateMessage}
                     </TableCell>
                 </TableRow>
@@ -416,6 +447,18 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
             </DialogFooter>
         </DialogContent>
     </Dialog>
+    
+    {/* History Dialog */}
+    <LeaveRequestHistoryDialog
+      request={selectedHistoryRequest}
+      open={isHistoryDialogOpen}
+      onOpenChange={(open) => {
+        setIsHistoryDialogOpen(open);
+        if (!open) {
+          setSelectedHistoryRequest(null);
+        }
+      }}
+    />
     </>
   );
 }

@@ -66,3 +66,17 @@ export type LeaveRequest = {
   documentUrl?: string | null;
   supervisorId: string | null;
 };
+
+export type LeaveRequestHistoryEntry = {
+  id: string;
+  requestId: string;
+  action: "submitted" | "approved" | "rejected" | "status_changed";
+  status: LeaveRequestStatus;
+  actorId: string;
+  actorName: string;
+  actorRole: EmployeeRole;
+  timestamp: Date;
+  comment?: string;
+  reason?: string;
+  previousStatus?: LeaveRequestStatus;
+};

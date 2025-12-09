@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sendLeaveRequestSubmittedEmail, sendLeaveRequestUpdatedEmail } from "@/lib/email";
 import { calculateLeaveDays, processEmployee } from "@/lib/utils";
+import { addLeaveRequestHistoryEntry } from "@/lib/leave-history";
 
 export default function DashboardPage() {
   const { currentUser, loading: authLoading } = useAuth();
@@ -84,6 +85,16 @@ export default function DashboardPage() {
         setLeaveRequests(prev => [...prev, newRequest]);
         toast({ title: "Request Submitted", description: "Your leave request has been submitted for approval." });
 
+        // Enregistrer l'événement de soumission dans l'historique
+        await addLeaveRequestHistoryEntry(
+          newRequest.id,
+          "submitted",
+          newRequest.status,
+          currentUser.id,
+          currentUser.name,
+          currentUser.role
+        );
+
         // Email notification logic
         await sendLeaveRequestSubmittedEmail({
             request: newRequest,
@@ -113,6 +124,7 @@ export default function DashboardPage() {
         const requestToUpdate = leaveRequests.find(r => r.id === requestId);
         if (!requestToUpdate) return;
 
+        const previousStatus = requestToUpdate.status;
         const updateData: any = { status };
         
         // Handle status-specific logic
@@ -156,6 +168,22 @@ export default function DashboardPage() {
             prev.map(req => req.id === requestId ? updatedRequest : req)
         );
         toast({ title: "Request Updated", description: "The leave request status has been updated." });
+
+        // Enregistrer l'événement dans l'historique
+        const action = status === 'Rejected' ? 'rejected' : status === 'Approved' ? 'approved' : 'status_changed';
+        await addLeaveRequestHistoryEntry(
+          requestId,
+          action,
+          status,
+          currentUser.id,
+          currentUser.name,
+          currentUser.role,
+          {
+            comment: details?.comment,
+            reason: details?.reason,
+            previousStatus: previousStatus !== status ? previousStatus : undefined,
+          }
+        );
 
         // Refresh employee data to reflect new leave balance
         if (status === 'Approved' || status === 'Rejected') {
