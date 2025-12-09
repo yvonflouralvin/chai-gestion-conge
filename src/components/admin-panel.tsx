@@ -378,7 +378,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                       <div className="p-2 flex justify-end">
                           <Button variant="ghost" size="sm" onClick={() => field.onChange(null)}>Clear</Button>
                       </div>
-                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} />
+                      <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} />
                   </PopoverContent></Popover>
                   <FormMessage />
               </FormItem>
@@ -467,19 +467,22 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                           <AccordionItem value="item-1">
                             <AccordionTrigger>View Contract History</AccordionTrigger>
                             <AccordionContent>
-                                {editingEmployee && editingEmployee.contracts != null && editingEmployee.contracts.length > 0 ? (
-                                    <div className="space-y-4 p-2 border rounded-md">
-                                        {[...editingEmployee.contracts].sort((a,b) => b.startDate.getTime() - a.startDate.getTime()).map((contract, index) => (
-                                            <div key={index} className="text-sm">
-                                                <p><strong>Title:</strong> {contract.title}</p>
-                                                <p><strong>Team:</strong> {contract.team}</p>
-                                                <p><strong>Type:</strong> {contract.contractType}</p>
-                                                <p><strong>Period:</strong> {format(contract.startDate, "MMM d, yyyy")} - {contract.endDate ? format(contract.endDate, "MMM d, yyyy") : 'Ongoing'}</p>
-                                                {index < editingEmployee.contracts.length - 1 && <hr className="my-2"/>}
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : <p>No contract history.</p>}
+                                {editingEmployee && editingEmployee.contracts != null && editingEmployee.contracts.length > 0 ? (() => {
+                                    const contracts = editingEmployee.contracts!;
+                                    return (
+                                        <div className="space-y-4 p-2 border rounded-md">
+                                            {[...contracts].sort((a,b) => b.startDate.getTime() - a.startDate.getTime()).map((contract, index) => (
+                                                <div key={index} className="text-sm">
+                                                    <p><strong>Title:</strong> {contract.title}</p>
+                                                    <p><strong>Team:</strong> {contract.team}</p>
+                                                    <p><strong>Type:</strong> {contract.contractType}</p>
+                                                    <p><strong>Period:</strong> {format(contract.startDate, "MMM d, yyyy")} - {contract.endDate ? format(contract.endDate, "MMM d, yyyy") : 'Ongoing'}</p>
+                                                    {index < contracts.length - 1 && <hr className="my-2"/>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                })() : <p>No contract history.</p>}
                             </AccordionContent>
                           </AccordionItem>
                         </Accordion>

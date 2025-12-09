@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { Employee, EmployeeWithCurrentContract } from '@/types';
 import { processEmployee } from '@/lib/utils';
@@ -32,6 +32,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: user.displayName || processedUser.name,
             avatar: user.photoURL || processedUser.avatar,
           });
+          if(processedUser.availableLeaveDays === undefined || processedUser.availableLeaveDays === null) {
+            await updateDoc(userDocRef, { availableLeaveDays: 0 });
+            setCurrentUser({
+              ...processedUser,
+              name: user.displayName || processedUser.name,
+              avatar: user.photoURL || processedUser.avatar,
+              availableLeaveDays: 0,
+            });
+          }
         } else {
             // Handle case where user exists in Auth but not in Firestore
             setCurrentUser(null);

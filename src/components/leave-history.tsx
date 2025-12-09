@@ -170,24 +170,24 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
             showActionsColumn = false;
             break;
         case 'approvals':
-            if (currentUser.role === 'Supervisor') {
+            if (currentUser.role === 'Supervisor' ) {
                 title = "Team Leave Approvals";
                 description = "Review and act on pending leave requests from your team.";
                 const supervisedEmployeeIds = employees.filter(e => e.supervisorId === currentUser.id).map(e => e.id);
-                baseRequests = requests.filter(r => supervisedEmployeeIds.includes(r.employeeId));
+                baseRequests = requests.filter(r => supervisedEmployeeIds.includes(r.employeeId) || r.supervisorId === currentUser.id);
                 emptyStateMessage = "No pending requests from your team.";
                 showFilters = true;
             } else if (currentUser.role === 'Manager') {
                 title = "Pending My Approval";
                 description = "Review and act on pending leave requests.";
-                baseRequests = requests.filter(r => r.status === 'Pending Manager' || r.status === 'Approved' || r.status === 'Rejected');
+                baseRequests = requests.filter(r => r.status === 'Pending Manager' || r.status === 'Approved' || r.status === 'Rejected' || r.supervisorId === currentUser.id);
                 emptyStateMessage = "No pending requests.";
                 showFilters = true;
             }
             else if (currentUser.role === 'HR') {
                 title = "Employee Leave Waiting for Approvals";
                 description = "Review and act on pending leave requests.";
-                baseRequests = requests.filter(r => r.status === 'Pending HR');
+                baseRequests = requests.filter(r => r.status === 'Pending HR' || r.supervisorId === currentUser.id);
                 emptyStateMessage = "No pending requests.";
                 showFilters = true;
             }
@@ -293,13 +293,16 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                   {showActionsColumn && 
                     <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
-                            <Button 
+                            {
+                                (request.status === 'Approved' || request.status === 'Rejected' || (currentUser.role === 'Supervisor' && request.status !== 'Pending Supervisor') || (currentUser.role === 'Manager' && request.status !== 'Pending Manager')) == false ?
+                               <>
+                               
+                               <Button 
                                 size="sm" 
                                 onClick={() => {
                                     setSelectedRequest(request);
                                     setIsApprovalDialogOpen(true);
-                                }} 
-                                disabled={request.status === 'Approved' || request.status === 'Rejected' || (currentUser.role === 'Supervisor' && request.status !== 'Pending Supervisor') || (currentUser.role === 'Manager' && request.status !== 'Pending Manager') }
+                                }}  
                             >
                                 Approve
                             </Button>
@@ -318,6 +321,11 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
+                               </>
+                                : <><p className="text-muted-foreground text-sm">No actions available</p></>
+                            }
+                           
+                            
                         </div>
                     </TableCell>
                   }

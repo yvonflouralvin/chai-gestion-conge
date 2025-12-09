@@ -132,31 +132,31 @@ export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }
     // Validation for Annual leave (ID 1)
     if (selectedLeaveTypeId === 1 && leaveDays > currentUser.availableLeaveDays) {
       toast({
-        variant: "destructive",
+        variant: "default",
         title: "Insufficient Annual Leave",
         description: `You are requesting ${leaveDays} days, but you only have ${currentUser.availableLeaveDays} available.`,
       });
-      return;
+      //return;
     }
 
     // Validation for Paternity leave (ID 3)
     if (selectedLeaveTypeId === 3 && leaveDays > availablePaternityDays) {
        toast({
-        variant: "destructive",
+        variant: "default",
         title: "Insufficient Paternity Leave",
         description: `You are requesting ${leaveDays} days, but you only have ${availablePaternityDays} available for this year.`,
       });
-      return;
+      //return;
     }
 
     // Validation for Maternity leave (ID 5)
     if (selectedLeaveTypeId === 5 && leaveDays > availableMaternityDays) {
        toast({
-        variant: "destructive",
+        variant: "default",
         title: "Insufficient Maternity Leave",
         description: `You are requesting ${leaveDays} days, but you only have ${availableMaternityDays} available for this year.`,
       });
-      return;
+      //return;
     }
     
     // Placeholder for file upload logic
@@ -184,7 +184,8 @@ export function LeaveRequestForm({ currentUser, addLeaveRequest, leaveRequests }
       managerReason: "",
       comment: "",
       submissionDate: new Date(),
-      documentUrl: documentUrl
+      documentUrl: documentUrl,
+      supervisorId: currentUser.supervisorId || null,
     };
 
     addLeaveRequest(newRequest);

@@ -26,6 +26,11 @@ export default function DashboardPage() {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    console.log(leaveRequests);
+    console.log(currentUser);
+  }, [leaveRequests, currentUser])
+
   const fetchAllData = async () => {
     if (!currentUser) return;
     setLoading(true);
@@ -50,6 +55,7 @@ export default function DashboardPage() {
           supervisorReason: data.supervisorReason,
           managerReason: data.managerReason,
           comment: data.comment,
+          supervisorId: data.supervisorId,
           submissionDate: data.submissionDate ? data.submissionDate.toDate() : data.startDate.toDate(),
         };
       });

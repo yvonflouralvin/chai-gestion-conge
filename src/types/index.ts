@@ -64,4 +64,5 @@ export type LeaveRequest = {
   comment: string;
   submissionDate: Date;
   documentUrl?: string | null;
+  supervisorId: string | null;
 };
