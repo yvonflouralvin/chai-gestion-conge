@@ -11,9 +11,9 @@ services:
       - dokploy-network
     # env_file:
     #   - ./.env
-    # volumes: 
-    #   - ./chai-gestion-conge:/app
-    #working_dir: /app
+    volumes: 
+      - ./:/app
+    working_dir: /app
     # tty: true
     command: >
       bash -c "yarn install && yarn build && yarn start"
