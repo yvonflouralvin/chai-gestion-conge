@@ -9,6 +9,7 @@ import { Header } from "@/components/header";
 import { LeaveRequestForm } from "@/components/leave-request-form";
 import { LeaveHistory } from "@/components/leave-history";
 import { AdminPanel } from "@/components/admin-panel";
+import { Dashboard } from "@/components/dashboard";
 import { leaveTypes } from "@/lib/data";
 import type { Employee, LeaveRequest, LeaveRequestStatus, EmployeeWithCurrentContract } from "@/types";
 import { useAuth } from "@/context/auth-context";
@@ -208,13 +209,21 @@ export default function DashboardPage() {
 
     if (currentUser.role === 'Admin') {
       return (
-        <Tabs defaultValue="employees">
+        <Tabs defaultValue="dashboard">
           <div className="flex items-center">
             <TabsList>
+              <TabsTrigger value="dashboard">Tableau de bord</TabsTrigger>
               <TabsTrigger value="employees">Employee Management</TabsTrigger>
               <TabsTrigger value="requests">Leave Requests</TabsTrigger>
             </TabsList>
           </div>
+          <TabsContent value="dashboard" className="mt-4">
+            <Dashboard 
+              leaveRequests={leaveRequests}
+              employees={employees}
+              currentUser={currentUser}
+            />
+          </TabsContent>
           <TabsContent value="employees" className="mt-4">
             <AdminPanel leaveRequests={leaveRequests} employees={employees} onEmployeesUpdate={fetchAllData} />
           </TabsContent>
@@ -272,15 +281,23 @@ export default function DashboardPage() {
     
     if (currentUser.role === 'HR') {
       return (
-        <Tabs defaultValue="requests">
+        <Tabs defaultValue="dashboard">
           <div className="flex items-center">
             <TabsList>
+               <TabsTrigger value="dashboard">Tableau de bord</TabsTrigger>
                <TabsTrigger value="requests">Leave Requests</TabsTrigger>
                <TabsTrigger value="hr">Waiting Approvals</TabsTrigger>
                <TabsTrigger value="request">New Request</TabsTrigger>
                <TabsTrigger value="history">My History</TabsTrigger>
             </TabsList>
           </div>
+          <TabsContent value="dashboard" className="mt-4">
+            <Dashboard 
+              leaveRequests={leaveRequests}
+              employees={employees}
+              currentUser={currentUser}
+            />
+          </TabsContent>
           <TabsContent value="requests" className="mt-4">
              <LeaveHistory 
                 view="all"
@@ -320,6 +337,44 @@ export default function DashboardPage() {
     }
 
     // For Employee and Manager
+    if (currentUser.role === 'Manager') {
+      return (
+        <Tabs defaultValue="dashboard">
+          <div className="flex items-center">
+            <TabsList>
+              <TabsTrigger value="dashboard">Tableau de bord</TabsTrigger>
+              <TabsTrigger value="request">New Request</TabsTrigger>
+              <TabsTrigger value="history">History & Approvals</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="dashboard" className="mt-4">
+            <Dashboard 
+              leaveRequests={leaveRequests}
+              employees={employees}
+              currentUser={currentUser}
+            />
+          </TabsContent>
+          <TabsContent value="request" className="mt-4">
+            <LeaveRequestForm 
+                currentUser={currentUser}
+                addLeaveRequest={addLeaveRequest}
+                leaveRequests={leaveRequests}
+              />
+          </TabsContent>
+          <TabsContent value="history" className="mt-4">
+             <LeaveHistory 
+                view="approvals"
+                requests={leaveRequests}
+                employees={employees}
+                currentUser={currentUser} 
+                updateRequestStatus={updateRequestStatus}
+              />
+          </TabsContent>
+        </Tabs>
+      );
+    }
+
+    // For Employee
     return (
         <Tabs defaultValue="request">
           <div className="flex items-center">
@@ -337,7 +392,7 @@ export default function DashboardPage() {
           </TabsContent>
           <TabsContent value="history" className="mt-4">
              <LeaveHistory 
-                view={currentUser.role === 'Manager' ? 'approvals' : 'personal'}
+                view="personal"
                 requests={leaveRequests}
                 employees={employees}
                 currentUser={currentUser} 
