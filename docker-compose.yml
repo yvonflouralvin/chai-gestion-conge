@@ -1,0 +1,23 @@
+version: '3.12'
+
+services:
+
+  chai_nextjs:
+    container_name: chai_nextjs
+    image: node:22-alpine
+    expose:
+      - 3000
+    networks:
+      - dokploy-network
+    # env_file:
+    #   - ./.env
+    # volumes: 
+    #   - ./chai-gestion-conge:/app
+    #working_dir: /app
+    # tty: true
+    command: >
+      bash -c "yarn install && yarn build && yarn start"
+
+networks:
+  dokploy-network:
+    external: true
