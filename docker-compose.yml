@@ -18,7 +18,7 @@ services:
   
     # tty: true
     command: >
-      sh -c "yarn install && yarn build && yarn start"
+      sh -c "yarn install && yarn build && yarn start -p 3000 -H 0.0.0.0"
 
 networks:
   dokploy-network:
