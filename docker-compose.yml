@@ -11,12 +11,14 @@ services:
       - dokploy-network
     # env_file:
     #   - ./.env
+    working_dir: /app
+
     volumes: 
       - ./:/app
-    working_dir: /app
+  
     # tty: true
     command: >
-      bash -c "yarn install && yarn build && yarn start"
+      sh -c "yarn install && yarn build && yarn start"
 
 networks:
   dokploy-network:
