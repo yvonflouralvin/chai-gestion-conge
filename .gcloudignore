@@ -1,0 +1,2 @@
+# Use custom Dockerfile
+# This prevents Firebase from using Nixpacks
