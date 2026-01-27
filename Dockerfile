@@ -28,7 +28,8 @@ RUN apk add --no-cache dumb-init
 COPY package.json yarn.lock ./
 
 # Install only production dependencies
-RUN yarn install --frozen-lockfile --production
+#RUN yarn install --frozen-lockfile --production
+RUN yarn install
 
 # Copy built application from builder stage
 COPY --from=builder /app/.next ./.next
