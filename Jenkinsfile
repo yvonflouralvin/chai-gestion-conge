@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'node:22-alpine' // image contenant Node.js et npm
+            args '-v /var/run/docker.sock:/var/run/docker.sock' // nécessaire pour build docker à l’intérieur
+        }
+    }
 
     environment {
         REGISTRY = "docker-registry.saas.cd"
@@ -50,26 +55,5 @@ pipeline {
                 }
             }
         }
-
-        // stage('Deploy via Dokploy') {
-        //     steps {
-        //         sshagent(['dokploy-ssh']) {
-        //             sh """
-        //             ssh deploy@dokploy-server "
-        //               docker pull $REGISTRY/$IMAGE:latest &&
-        //               docker stop nextjs-project || true &&
-        //               docker rm nextjs-project || true &&
-        //               docker run -d --name nextjs-project -p 3000:3000 $REGISTRY/$IMAGE:latest
-        //             "
-        //             """
-        //         }
-        //     }
-        // }
     }
-
-    // post {
-    //     always {
-    //         sh 'docker logout $REGISTRY'
-    //     }
-    // }
 }
