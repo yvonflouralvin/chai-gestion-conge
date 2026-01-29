@@ -22,7 +22,7 @@ pipeline {
                 '''
             }
         }
-        
+
         stage('Install Dependencies') {
             steps {
                 sh '''
@@ -45,12 +45,29 @@ pipeline {
                 """
             }
         }
+
+        stage('Push Docker Image') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'registry_user',
+                    usernameVariable: 'REG_USER',
+                    passwordVariable: 'REG_PASS'
+                )]) {
+                    sh """
+                    echo "$REG_PASS" | docker login $REGISTRY -u "$REG_USER" --password-stdin
+                    docker push $REGISTRY/$IMAGE:$TAG
+                    docker push $REGISTRY/$IMAGE:latest
+                    docker logout $REGISTRY
+                    """
+                }
+            }
+        }
     }
 
     
     post {
         always {
-            echo "docker system prune -f || true"
+            sh 'docker system prune -f || true'
         }
         success {
             echo "✅ Build & push réussis : ${REGISTRY}/${IMAGE}:${TAG}"
