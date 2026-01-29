@@ -5,13 +5,25 @@ pipeline {
         }
     }
 
+    environment {
+        REGISTRY = "docker-registry.saas.cd"
+        IMAGE    = "chai-gestion-conge"
+        TAG      = "1.0.0"
+    }
+
     stages {
 
         stage('Install Dependencies') {
             steps {
                 sh '''
-                  echo ""Installing dependencies..."" 
+                  npm install 
                 '''
+            }
+        }
+
+        stage('Build Next.js') {
+            steps {
+                sh 'npm run build'
             }
         }
 
@@ -19,7 +31,7 @@ pipeline {
 
     post {
         always {
-            sh 'docker system prune -f || true'
+            echo "docker system prune -f || true"
         }
         success {
             echo "✅ Build & push réussis : ${REGISTRY}/${IMAGE}:${TAG}"
