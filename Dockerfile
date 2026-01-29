@@ -1,17 +1,3 @@
-FROM node:22-alpine
-
-WORKDIR /app
-
-COPY package.json yarn.lock ./
-
-RUN yarn install
-
-COPY . .
-
-RUN yarn build
-
-ENV NODE_ENV=production
-
+FROM docker-registry.saas.cd/chai-gestion-conge:latest
 EXPOSE 3000
-
 CMD ["yarn", "start"]
