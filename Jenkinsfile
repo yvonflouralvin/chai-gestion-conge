@@ -27,8 +27,17 @@ pipeline {
             }
         }
 
+        stage('Build Docker Image') {
+            steps {
+                sh """
+                docker build -t $REGISTRY/$IMAGE:$TAG .
+                docker tag $REGISTRY/$IMAGE:$TAG $REGISTRY/$IMAGE:latest
+                """
+            }
+        }
     }
 
+    
     post {
         always {
             echo "docker system prune -f || true"
