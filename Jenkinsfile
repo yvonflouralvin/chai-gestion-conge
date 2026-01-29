@@ -2,6 +2,7 @@ pipeline {
     agent {
         docker {
             image 'node:22-alpine' 
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
 
@@ -13,6 +14,15 @@ pipeline {
 
     stages {
 
+        stage('Install Docker CLI') {
+            steps {
+                sh '''
+                apt-get update
+                apt-get install -y docker.io
+                '''
+            }
+        }
+        
         stage('Install Dependencies') {
             steps {
                 sh '''
