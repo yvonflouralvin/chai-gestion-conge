@@ -1,10 +1,11 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:22-bullseye' 
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any
+    // agent {
+    //     docker {
+    //         image 'node:22-bullseye' 
+    //         args '-v /var/run/docker.sock:/var/run/docker.sock'
+    //     }
+    // }
 
     environment {
         REGISTRY = "docker-registry.saas.cd"
