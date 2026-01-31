@@ -8,7 +8,7 @@ pipeline {
     // }
 
     environment {
-        REGISTRY = "http://private_registry:5000"
+        REGISTRY = "saasdrc.azurecr.io"
         IMAGE    = "chai-request"
         TAG      = "1.0.0"
     }
@@ -49,18 +49,10 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'registry_user',
-                    usernameVariable: 'REG_USER',
-                    passwordVariable: 'REG_PASS'
-                )]) {
                     sh """
-                    echo "$REG_PASS" | docker login $REGISTRY -u "$REG_USER" --password-stdin
                     docker push $REGISTRY/$IMAGE:$TAG
                     docker push $REGISTRY/$IMAGE:latest
-                    docker logout $REGISTRY
                     """
-                }
             }
         }
     }
