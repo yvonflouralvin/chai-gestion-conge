@@ -8,7 +8,7 @@ pipeline {
     // }
 
     environment {
-        REGISTRY = "docker-registry.saas.cd"
+        REGISTRY = "http://private_registry:5000"
         IMAGE    = "chai-request"
         TAG      = "1.0.0"
     }
