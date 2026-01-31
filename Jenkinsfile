@@ -8,34 +8,34 @@ pipeline {
 
     environment {
         REGISTRY = "docker-registry.saas.cd"
-        IMAGE    = "chai-gestion-conge"
+        IMAGE    = "chai-request"
         TAG      = "1.0.0"
     }
 
     stages {
 
-        stage('Install Docker CLI') {
-            steps {
-                sh '''
-                  apt-get update
-                  apt-get install -y docker.io
-                '''
-            }
-        }
+        // stage('Install Docker CLI') {
+        //     steps {
+        //         sh '''
+        //           apt-get update
+        //           apt-get install -y docker.io
+        //         '''
+        //     }
+        // }
 
-        stage('Install Dependencies') {
-            steps {
-                sh '''
-                  npm install 
-                '''
-            }
-        }
+        // stage('Install Dependencies') {
+        //     steps {
+        //         sh '''
+        //           npm install 
+        //         '''
+        //     }
+        // }
 
-        stage('Build Next.js') {
-            steps {
-                sh 'npm run build'
-            }
-        }
+        // stage('Build Next.js') {
+        //     steps {
+        //         sh 'npm run build'
+        //     }
+        // }
 
         stage('Build Docker Image') {
             steps {
