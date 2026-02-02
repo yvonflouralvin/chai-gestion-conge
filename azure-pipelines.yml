@@ -1,0 +1,16 @@
+trigger:
+- build
+
+pool:
+  name: auto-hosted-pool
+
+container:
+  image: node:20-alpine
+
+steps:
+- checkout: self
+
+- script: |
+    yarn install --frozen-lockfile
+    yarn build
+  displayName: Build Next.js in container
