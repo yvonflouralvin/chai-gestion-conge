@@ -4,7 +4,7 @@ trigger:
 variables:
   REGISTRY: saasdrc.azurecr.io
   IMAGE_NAME: chai-conge-request
-  TAG: $(Build.BuildId)
+  TAG: 1.0.2
 
 pool:
   name: eShopOnWebSelfPool
