@@ -2,7 +2,7 @@ trigger:
 - build
 
 variables:
-  REGISTRY: docker-registry.saas.cd
+  REGISTRY: saasdrc.azurecr.io
   IMAGE_NAME: chai-conge-request
   TAG: $(Build.BuildId)
 
@@ -33,8 +33,8 @@ steps:
 # 🔹 Build Docker Image
 - script: |
     docker build \
-      -t $(REGISTRY)/$(IMAGE_NAME):$(TAG) \
-      -t $(REGISTRY)/$(IMAGE_NAME):latest \
+      -t $(REGISTRY)/chai/$(IMAGE_NAME):$(TAG) \
+      -t $(REGISTRY)/chai/$(IMAGE_NAME):latest \
       .
   displayName: 'Docker Build'
 
