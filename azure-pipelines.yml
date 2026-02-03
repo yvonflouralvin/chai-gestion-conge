@@ -1,16 +1,45 @@
 trigger:
 - build
 
+variables:
+  REGISTRY: docker-registry.saas.cd
+  IMAGE_NAME: chai-conge-request
+  TAG: $(Build.BuildId)
+
 pool:
   name: eShopOnWebSelfPool
-
-container:
-  image: node:22-bullseye
 
 steps:
 - checkout: self
 
+# 🔹 Node.js
+# - task: NodeTool@0
+#   inputs:
+#     versionSpec: '22.x'
+#   displayName: 'Use Node.js 22'
+
+# 🔹 Build Next.js
+# - script: |
+#     yarn install --frozen-lockfile
+#     yarn build
+#   displayName: 'Build Next.js'
+
+# 🔹 Login Docker Registry
+# - script: |
+#     echo "$(DOCKER_PASSWORD)" | docker login $(REGISTRY) \
+#       -u "$(DOCKER_USERNAME)" --password-stdin
+#   displayName: 'Docker Login'
+
+# 🔹 Build Docker Image
 - script: |
-    yarn install --frozen-lockfile
-    yarn build
-  displayName: Build Next.js in container
+    docker build \
+      -t $(REGISTRY)/$(IMAGE_NAME):$(TAG) \
+      -t $(REGISTRY)/$(IMAGE_NAME):latest \
+      .
+  displayName: 'Docker Build'
+
+# 🔹 Push Docker Image
+- script: |
+    docker push $(REGISTRY)/$(IMAGE_NAME):$(TAG)
+    docker push $(REGISTRY)/$(IMAGE_NAME):latest
+  displayName: 'Docker Push'
