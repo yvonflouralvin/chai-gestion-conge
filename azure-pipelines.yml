@@ -40,6 +40,6 @@ steps:
 
 # 🔹 Push Docker Image
 - script: |
-    docker push $(REGISTRY)/$(IMAGE_NAME):$(TAG)
-    docker push $(REGISTRY)/$(IMAGE_NAME):latest
+    docker push $(REGISTRY)/chai/$(IMAGE_NAME):$(TAG)
+    docker push $(REGISTRY)/chai/$(IMAGE_NAME):latest
   displayName: 'Docker Push'
