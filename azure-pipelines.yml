@@ -2,7 +2,7 @@ trigger:
 - build
 
 variables:
-  REGISTRY: docker-registry.saas.cd
+  REGISTRY: saasdrc.azurecr.io
   IMAGE_NAME: chai-conge-request
   TAG: 1.0.1
 
