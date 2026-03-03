@@ -24,6 +24,8 @@ export type Employee = {
   role: EmployeeRole;
   contracts: Contract[] | null;
   availableLeaveDays: number;
+  contractStartDate: Date | null
+  contractEndDate: Date | null
 };
 
 // Derived properties for convenience

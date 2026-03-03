@@ -28,13 +28,14 @@ import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { calculateLeaveDays, cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { Info, Calendar as CalendarIcon, Loader2, History } from "lucide-react";
+import { Info, Calendar as CalendarIcon, Loader2, History, DownloadIcon, FileDownIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
 import { Label } from "./ui/label";
 import { leaveTypes } from "@/lib/data";
 import { LeaveRequestHistoryDialog } from "./leave-request-history-dialog";
+import Link from "next/link";
 
 type LeaveHistoryProps = {
   requests: LeaveRequest[];
@@ -133,7 +134,7 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
 
         const badge = () => {
              switch (status) {
-                case 'Approved': return <Badge variant="default" className="bg-green-500 hover:bg-green-600">Approved</Badge>;
+                case 'Approved': return <><Badge variant="default" className="bg-green-500 hover:bg-green-600">Approved</Badge><Link href={`/download/${request.id}`}><FileDownIcon className="cursor-pointer" /></Link></>;
                 case 'Rejected': return <Badge variant="destructive">Rejected</Badge>;
                 case 'Pending Supervisor': return <Badge variant="secondary" className="bg-yellow-400 text-black hover:bg-yellow-500">Pending Supervisor</Badge>;
                 case 'Pending Manager': return <Badge variant="secondary" className="bg-orange-400 text-black hover:bg-orange-500">Pending Manager</Badge>;
@@ -307,7 +308,7 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                                 }}
                             >
                                 <History className="h-4 w-4 mr-1" />
-                                Historique
+                                Historiques
                             </Button>
                             {
                                 (request.status === 'Approved' || request.status === 'Rejected' || (currentUser.role === 'Supervisor' && request.status !== 'Pending Supervisor') || (currentUser.role === 'Manager' && request.status !== 'Pending Manager')) == false ?
@@ -356,7 +357,7 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                         }}
                       >
                         <History className="h-4 w-4 mr-1" />
-                        Historique
+                        Historiques
                       </Button>
                     </TableCell>
                   )}

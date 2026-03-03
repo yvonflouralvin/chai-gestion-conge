@@ -1,9 +1,44 @@
 
 'use server';
 
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { LeaveRequest, LeaveRequestStatus } from "@/types";
+
+
+export async function getLeaveRequestById(id: string): Promise<LeaveRequest | null> {
+    if (!id) {
+        console.error("getLeaveRequestById called with no ID.");
+        return null;
+    }
+    try { 
+        const docRef = doc(db, 'leave-requests', id)
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            return {
+                id: docSnap.id,
+                employeeId: data.employeeId,
+                leaveTypeId: data.leaveTypeId,
+                circumstanceType: data.circumstanceType,
+                startDate: data.startDate.toDate(),
+                endDate: data.endDate.toDate(),
+                status: data.status as LeaveRequestStatus,
+                supervisorReason: data.supervisorReason,
+                managerReason: data.managerReason,
+                comment: data.comment,
+                submissionDate: data.submissionDate ? data.submissionDate.toDate() : data.startDate.toDate(),
+                documentUrl: data.documentUrl,
+                supervisorId: null,
+            };
+        }else{
+            return null
+        }
+    } catch (error) {
+        console.error(`Error fetching leave requests for employee ID ${id}:`, error);
+        return null;
+    }
+}
 
 /**
  * Retrieves all leave requests for a specific employee.
@@ -35,7 +70,8 @@ export async function getLeaveRequestsByEmployeeId(employeeId: string): Promise<
                 managerReason: data.managerReason,
                 comment: data.comment,
                 submissionDate: data.submissionDate ? data.submissionDate.toDate() : data.startDate.toDate(),
-                documentUrl: data.documentUrl
+                documentUrl: data.documentUrl,
+                supervisorId: null
             };
         });
 
@@ -45,3 +81,4 @@ export async function getLeaveRequestsByEmployeeId(employeeId: string): Promise<
         return [];
     }
 }
+
