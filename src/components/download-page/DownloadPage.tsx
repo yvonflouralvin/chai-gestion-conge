@@ -69,16 +69,16 @@ export default function DownloadPage({ id }: { id: string }) {
                             <div className="flex">
                                 <div>
                                     <div className='flex gap-[4px]'>
-                                        <input type="checkbox" contentEditable={false} defaultChecked={leaveRequest?.leaveTypeId === 1} /> <p>Congé annuel</p>
+                                        <input type="checkbox" contentEditable={false} defaultChecked={leaveRequest?.leaveTypeId === 1} checked={leaveRequest?.leaveTypeId === 1}/> <p>Congé annuel</p>
                                     </div>
                                     <div className='flex gap-[4px]'>
-                                        <input type="checkbox"  contentEditable={false}  defaultChecked={leaveRequest?.leaveTypeId === 2} /> <p>Congé de mariage</p>
+                                        <input type="checkbox"  contentEditable={false}  defaultChecked={leaveRequest?.leaveTypeId === 2} checked={leaveRequest?.leaveTypeId === 2}/> <p>Congé de mariage</p>
                                     </div>
                                     <div className='flex gap-[4px]'>
-                                        <input type="checkbox"  contentEditable={false}  defaultChecked={leaveRequest?.leaveTypeId === 3} /> <p>Décès</p>
+                                        <input type="checkbox"  contentEditable={false}  defaultChecked={leaveRequest?.leaveTypeId === 3} checked={leaveRequest?.leaveTypeId === 3}/> <p>Décès</p>
                                     </div>
                                     <div className='flex gap-[4px]'>
-                                        <input type="checkbox"  contentEditable={false}  defaultChecked={leaveRequest?.leaveTypeId === 6} /> <p>Autres (à préciser): ........</p>
+                                        <input type="checkbox"  contentEditable={false}  defaultChecked={leaveRequest?.leaveTypeId === 6} checked={leaveRequest?.leaveTypeId === 4}/> <p>Autres (à préciser): ........</p>
                                     </div>
                                 </div>
                                 <div>
@@ -114,7 +114,7 @@ export default function DownloadPage({ id }: { id: string }) {
                         <InfoZone>
                             <>
                                 <div className='flex gap-[4px]'>
-                                    <input type="checkbox" defaultChecked  contentEditable={false} /> <p>Approuvé</p>
+                                    <input type="checkbox" defaultChecked  contentEditable={false} checked/> <p>Approuvé</p>
                                 </div>
                                 <div className='flex gap-[4px]'>
                                     <input type="checkbox" /> <p>Rejeté</p>

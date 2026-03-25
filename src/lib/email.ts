@@ -3,10 +3,21 @@ import type { EmployeeWithCurrentContract, LeaveRequest, LeaveType } from "@/typ
 import { format } from "date-fns";
 import { getEmployeeById, getEmployeesByRole, getManager } from "./employee";
 import { calculateLeaveDays } from "./utils";
+import nodemailer from "nodemailer";
 
 // This is a mock email service. In a real application, you would use a
 // service like SendGrid, Mailgun, or Firebase Extensions to send emails.
 // The functions here log to the console to simulate sending an email.
+
+const transporter = nodemailer.createTransport({
+  host: "smtp.hostinger.com",
+  port: 465,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 type EmailDetails = {
     to: string;
@@ -16,11 +27,20 @@ type EmailDetails = {
 
 async function sendEmail(details: EmailDetails) {
     console.log("--- Sending Email ---");
-    console.log(`To: ${details.to}`);
-    // console.log(`To: ${details.to}`);
-    console.log(`Subject: ${details.subject}`);
-    console.log("Body:");
-    console.log(details.body);
+    try {
+        const info = await transporter.sendMail({
+        from: `HR Holyday Request`,
+        to: details.to,
+        subject: details.subject,
+        html: details.body,
+        });
+
+        console.log("✅ Email envoyé:", info.messageId);
+        return info;
+    } catch (error) {
+        console.error("❌ Erreur envoi email:", error);
+        throw error;
+    }
     console.log("---------------------");
     // In a real app, you would have your email sending logic here.
     // Example:
