@@ -1,7 +1,7 @@
 
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { eachDayOfInterval, isSunday, isSameDay, differenceInMonths } from 'date-fns';
+import { eachDayOfInterval, isSunday, isSameDay, differenceInMonths, isWeekend } from 'date-fns';
 import type { Employee, Contract, EmployeeWithCurrentContract } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
@@ -10,12 +10,37 @@ export function cn(...inputs: ClassValue[]) {
 
 // A mock list of public holidays
 const publicHolidays: Date[] = [
-  new Date('2024-01-01'), // New Year's Day
-  new Date('2024-07-04'), // Independence Day
-  new Date('2024-12-25'), // Christmas Day
+  new Date('2026-01-01'), // Nouvel an
+  new Date('2026-01-04'), // Journee des martyrs de l'Independance
+  new Date('2026-01-16'), // Journee du Heros National Laurent Desire Kabila
+  new Date('2026-01-17'), // Journee du Heros National Patrice Emery Lumumba
+  new Date('2026-04-06'), // Journee du Combat de Simon Kimbangu et de la conscience africaine
+  new Date('2026-05-01'), // Fete du Travail
+  new Date('2026-05-17'), // Journee des Forces Armees
+  new Date('2026-06-30'), // Journee de l'Independance
+  new Date('2026-08-01'), // Fete des Parents
+  new Date('2026-12-25'), // Noel
 ];
 
-export function calculateLeaveDays(startDate: Date | undefined, endDate: Date | undefined): number {
+// export function calculateLeaveDays(startDate: Date | undefined, endDate: Date | undefined): number {
+//   if (!startDate || !endDate || endDate < startDate) {
+//     return 0;
+//   }
+
+//   const interval = eachDayOfInterval({ start: startDate, end: endDate });
+
+//   const workingDays = interval.filter(day => {
+//     const isHoliday = publicHolidays.some(holiday => isSameDay(day, holiday));
+//     return !isSunday(day) && !isHoliday;
+//   });
+
+//   return workingDays.length;
+// }
+
+export function calculateLeaveDays(
+  startDate: Date | undefined,
+  endDate: Date | undefined
+): number {
   if (!startDate || !endDate || endDate < startDate) {
     return 0;
   }
@@ -24,7 +49,7 @@ export function calculateLeaveDays(startDate: Date | undefined, endDate: Date | 
 
   const workingDays = interval.filter(day => {
     const isHoliday = publicHolidays.some(holiday => isSameDay(day, holiday));
-    return !isSunday(day) && !isHoliday;
+    return !isWeekend(day) && !isHoliday;
   });
 
   return workingDays.length;
