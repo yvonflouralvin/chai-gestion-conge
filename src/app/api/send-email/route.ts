@@ -4,12 +4,12 @@ export async function POST(req: Request) {
   const { to, subject, body } = await req.json();
 
   const transporter = nodemailer.createTransport({
-  host: "smtp.hostinger.com",
+  host: "smtp.gmail.com",
   port: 465,
   secure: false,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: "yvonflouralvin@gmail.com",//process.env.EMAIL_USER,
+    pass: "wnop mvgi ssvw vmec"//process.env.EMAIL_PASS,
   },
 });
 

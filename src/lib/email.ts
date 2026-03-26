@@ -123,6 +123,7 @@ export async function sendLeaveRequestSubmittedEmail(props: SubmittedEmailProps)
                         <p style="margin-top: 20px;">Vous pouvez examiner cette demande dans le tableau de bord EasyLeave.</p>
                     </div>
                 `;
+                
                 await sendEmail({ to: hr.email, subject, body });
             }
         }
