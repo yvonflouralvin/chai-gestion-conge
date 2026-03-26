@@ -18,7 +18,7 @@ type EmailDetails = {
 
 async function sendEmail(details: EmailDetails) {
     console.log("--- Sending Email ---");
-    await fetch("/api/send-email", {
+    fetch("/api/send-email", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -120,7 +120,7 @@ export async function sendLeaveRequestSubmittedEmail(props: SubmittedEmailProps)
                         <p>Bonjour ${hr.name},</p>
                         <p>${employee.name} a soumis une nouvelle demande de congé qui nécessite votre approbation.</p>
                         ${detailsHtml}
-                        <p style="margin-top: 20px;">Vous pouvez examiner cette demande dans le tableau de bord.</p>
+                        <p style="margin-top: 20px;">Vous pouvez examiner cette demande dans <a href="https://chai-request.com/" blank>l'application : https://chai-request.com/</a>.</p>
                     </div>
                 `;
 
@@ -149,7 +149,7 @@ export async function sendLeaveRequestSubmittedEmail(props: SubmittedEmailProps)
             <p>Bonjour ${supervisor.name},</p>
             <p>${employee.name} a soumis une nouvelle demande de congé qui nécessite votre approbation.</p>
             ${detailsHtml}
-            <p style="margin-top: 20px;">Vous pouvez examiner cette demande dans le tableau de bord.</p>
+            <p style="margin-top: 20px;">Vous pouvez examiner cette demande dans <a>l'application : https://chai-request.com/</a>.</p>
         </div>
     `;
 
@@ -203,7 +203,7 @@ export async function sendLeaveRequestUpdatedEmail(props: UpdatedEmailProps) {
                     <p>Une demande de congé de ${employee.name} a été approuvée par ${actor.name} (${actorRole}) et nécessite maintenant votre approbation.</p>
                     ${detailsHtml}
                     ${commentsHtml}
-                    <p style="margin-top: 20px;">Vous pouvez examiner et approuver cette demande dans le tableau de bord.</p>
+                    <p style="margin-top: 20px;">Vous pouvez examiner et approuver cette demande dans <a>l'application : https://chai-request.com/</a>.</p>
                 </div>
             `;
             await sendEmail({ to: supervisor.email, subject, body });
@@ -234,7 +234,7 @@ export async function sendLeaveRequestUpdatedEmail(props: UpdatedEmailProps) {
                     <p>Une demande de congé de ${employee.name} a été approuvée par ${actor.name} (${actorRole}) et nécessite maintenant votre approbation finale.</p>
                     ${detailsHtml}
                     ${commentsHtml}
-                    <p style="margin-top: 20px;">Vous pouvez examiner et approuver cette demande dans le tableau de bord.</p>
+                    <p style="margin-top: 20px;">Vous pouvez examiner et approuver cette demande dans <a>l'application : https://chai-request.com/</a>.</p>
                 </div>
             `;
             await sendEmail({ to: manager.email, subject, body });
