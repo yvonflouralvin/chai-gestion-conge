@@ -120,10 +120,10 @@ export async function sendLeaveRequestSubmittedEmail(props: SubmittedEmailProps)
                         <p>Bonjour ${hr.name},</p>
                         <p>${employee.name} a soumis une nouvelle demande de congé qui nécessite votre approbation.</p>
                         ${detailsHtml}
-                        <p style="margin-top: 20px;">Vous pouvez examiner cette demande dans le tableau de bord EasyLeave.</p>
+                        <p style="margin-top: 20px;">Vous pouvez examiner cette demande dans le tableau de bord.</p>
                     </div>
                 `;
-                
+
                 await sendEmail({ to: hr.email, subject, body });
             }
         }
@@ -149,7 +149,7 @@ export async function sendLeaveRequestSubmittedEmail(props: SubmittedEmailProps)
             <p>Bonjour ${supervisor.name},</p>
             <p>${employee.name} a soumis une nouvelle demande de congé qui nécessite votre approbation.</p>
             ${detailsHtml}
-            <p style="margin-top: 20px;">Vous pouvez examiner cette demande dans le tableau de bord EasyLeave.</p>
+            <p style="margin-top: 20px;">Vous pouvez examiner cette demande dans le tableau de bord.</p>
         </div>
     `;
 
@@ -203,7 +203,7 @@ export async function sendLeaveRequestUpdatedEmail(props: UpdatedEmailProps) {
                     <p>Une demande de congé de ${employee.name} a été approuvée par ${actor.name} (${actorRole}) et nécessite maintenant votre approbation.</p>
                     ${detailsHtml}
                     ${commentsHtml}
-                    <p style="margin-top: 20px;">Vous pouvez examiner et approuver cette demande dans le tableau de bord EasyLeave.</p>
+                    <p style="margin-top: 20px;">Vous pouvez examiner et approuver cette demande dans le tableau de bord.</p>
                 </div>
             `;
             await sendEmail({ to: supervisor.email, subject, body });
@@ -234,7 +234,7 @@ export async function sendLeaveRequestUpdatedEmail(props: UpdatedEmailProps) {
                     <p>Une demande de congé de ${employee.name} a été approuvée par ${actor.name} (${actorRole}) et nécessite maintenant votre approbation finale.</p>
                     ${detailsHtml}
                     ${commentsHtml}
-                    <p style="margin-top: 20px;">Vous pouvez examiner et approuver cette demande dans le tableau de bord EasyLeave.</p>
+                    <p style="margin-top: 20px;">Vous pouvez examiner et approuver cette demande dans le tableau de bord.</p>
                 </div>
             `;
             await sendEmail({ to: manager.email, subject, body });
