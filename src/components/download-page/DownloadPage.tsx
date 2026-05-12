@@ -3,8 +3,9 @@ import PrintFunction from '@/components/download-page/PrintFunction'
 import Image from 'next/image'
 import React from 'react'
 import { getLeaveRequestById } from '@/lib/requests'
-import { LeaveRequest, Employee } from '@/types'
+import { LeaveRequest, Employee, LeaveRequestHistoryEntry } from '@/types'
 import { getEmployeeById } from '@/lib/employee'
+import { getLeaveRequestHistory } from '@/lib/leave-history'
 interface InfoZoneProps {
     children: React.ReactNode
 }
@@ -21,9 +22,17 @@ function InfoZone(props: InfoZoneProps) {
 export default function DownloadPage({ id }: { id: string }) {
     const [leaveRequest, setLeaveRequest] = React.useState<LeaveRequest | null>(null)
     const [employeed, setEmployeed] = React.useState<Employee | null>(null)
+    const [history, setHistory] = React.useState<LeaveRequestHistoryEntry[]>([]);
+
+
+     
+
     React.useEffect(() => {
         const exec = async () => {
             const _leaveRequest = await getLeaveRequestById(id);
+            const _historyData = await getLeaveRequestHistory(id);
+            setHistory(_historyData)
+
             console.log(_leaveRequest)
             if (_leaveRequest != null) {
                 setLeaveRequest(_leaveRequest)
@@ -128,11 +137,19 @@ export default function DownloadPage({ id }: { id: string }) {
                         </InfoZone>
                         <InfoZone>
                             <p>Signature du Supérieur hiérarchique</p>
-                            <p className='mt-[30px]'>Date :</p>
-                        </InfoZone>
-                        <InfoZone>
-                            <p>Signature du Directeur Pays</p>
-                            <p className='mt-[30px]'>Date :</p>
+                            {history[history.length-2] && <p className="font-bold text-[14px]">{history[history.
+                                length-2].actorName}</p> }
+                                                            {history[history.length-2] && <p className="font-light text-[12px]">{history[history
+                                .length-2].actorRole}</p> }
+                                                            {history[history.length-2] && <p className="font-light text-[12px]">Date : {history[history.length-2].timestamp.toLocaleDateString()}</p> }
+                                                        </InfoZone>
+                                                        <InfoZone>
+                                                            <p>Signature du Directeur Pays</p>
+                                                            {history[history.length-1] && <p className="font-bold text-[14px]">{history[history.
+                                length-1].actorName}</p> }
+                                                            {history[history.length-1] && <p className="font-light text-[12px]">{history[history
+                                .length-1].actorRole}</p> }
+                                                            {history[history.length-1] && <p className="font-light text-[12px]">Date : {history[history.length-1].timestamp.toLocaleDateString()}</p> }
                         </InfoZone>
                     </div>
                     <div className='mt-[40px] text-[12px] text-blue-500 text-center'>

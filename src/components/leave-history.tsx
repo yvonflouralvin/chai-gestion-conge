@@ -134,7 +134,7 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
 
         const badge = () => {
              switch (status) {
-                case 'Approved': return <><Badge variant="default" className="bg-green-500 hover:bg-green-600">Approved</Badge><Link href={`/download/${request.id}`}><FileDownIcon className="cursor-pointer" /></Link></>;
+                case 'Approved': return <><Badge variant="default" className="bg-green-500 hover:bg-green-600">Approved</Badge><Link target="blank" href={`/download/${request.id}`}><FileDownIcon className="cursor-pointer" /></Link></>;
                 case 'Rejected': return <Badge variant="destructive">Rejected</Badge>;
                 case 'Pending Supervisor': return <Badge variant="secondary" className="bg-yellow-400 text-black hover:bg-yellow-500">Pending Supervisor</Badge>;
                 case 'Pending Manager': return <Badge variant="secondary" className="bg-orange-400 text-black hover:bg-orange-500">Pending Manager</Badge>;
