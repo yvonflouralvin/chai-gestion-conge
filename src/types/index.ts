@@ -21,7 +21,7 @@ export type Employee = {
   email: string;
   avatar: string;
   supervisorId: string | null ;
-  role: EmployeeRole;
+  role: EmployeeRole[];
   contracts: Contract[] | null;
   availableLeaveDays: number;
   contractStartDate: Date | null

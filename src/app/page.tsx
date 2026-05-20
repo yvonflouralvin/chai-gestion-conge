@@ -131,13 +131,13 @@ export default function DashboardPage() {
         // Handle status-specific logic
         if (status === 'Rejected') {
             if (details?.reason) {
-                if (currentUser.role === 'Supervisor') updateData.supervisorReason = details.reason;
-                else if (currentUser.role === 'Manager') updateData.managerReason = details.reason;
+                if (currentUser.role.includes('Supervisor') && previousStatus === 'Pending Supervisor') updateData.supervisorReason = details.reason;
+                else if (currentUser.role.includes('Manager') && previousStatus === 'Pending Manager') updateData.managerReason = details.reason;
             }
         } else {
             // Reset reasons if not rejecting
-            if (currentUser.role === 'Supervisor') updateData.supervisorReason = "";
-            if (currentUser.role === 'Manager') updateData.managerReason = "";
+            if (currentUser.role.includes('Supervisor') && previousStatus === 'Pending Supervisor') updateData.supervisorReason = "";
+            if (currentUser.role.includes('Manager') && previousStatus === 'Pending Manager') updateData.managerReason = "";
         }
 
         if (details?.comment) updateData.comment = details.comment;
@@ -207,7 +207,7 @@ export default function DashboardPage() {
   const renderTabs = () => {
     if (!currentUser) return null;
 
-    if (currentUser.role === 'Admin') {
+    if (currentUser.role.includes('Admin')) {
       return (
         <Tabs defaultValue="dashboard">
           <div className="flex items-center">
@@ -240,7 +240,7 @@ export default function DashboardPage() {
       );
     }
     
-    if (currentUser.role === 'Supervisor') {
+    if (currentUser.role.includes('Supervisor')) {
       return (
         <Tabs defaultValue="approvals">
           <div className="flex items-center">
@@ -279,7 +279,7 @@ export default function DashboardPage() {
       );
     }
     
-    if (currentUser.role === 'HR') {
+    if (currentUser.role.includes('HR')) {
       return (
         <Tabs defaultValue="dashboard">
           <div className="flex items-center">
@@ -337,7 +337,7 @@ export default function DashboardPage() {
     }
 
     // For Employee and Manager
-    if (currentUser.role === 'Manager') {
+    if (currentUser.role.includes('Manager')) {
       return (
         <Tabs defaultValue="dashboard">
           <div className="flex items-center">
