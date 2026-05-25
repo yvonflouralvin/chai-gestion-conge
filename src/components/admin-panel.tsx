@@ -41,6 +41,7 @@ const employeeSchema = z.object({
     Array.isArray(value) ? value : [value]
   ), //min(1, { message: "Select at least one role." }),
   supervisorId: z.string().nullable(),
+  availableLeaveDays: z.string().default(`0`)
 });
 
 const contractSchema = z.object({
@@ -82,6 +83,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                 ? editingEmployee.role
                 : [editingEmployee.role],
             supervisorId: editingEmployee.supervisorId ? String(editingEmployee.supervisorId) : null,
+            availableLeaveDays: `${editingEmployee.availableLeaveDays ? editingEmployee.availableLeaveDays : 0}`
         });
         const currentContract = getCurrentContract(editingEmployee);
         if (currentContract) {
@@ -195,6 +197,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
             name: values.name,
             role: values.role,
             supervisorId: getSupervisorIdValue(values),
+            availableLeaveDays: values.availableLeaveDays,
         });
 
         toast({
@@ -422,6 +425,13 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                       </div>
                       <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} />
                   </PopoverContent></Popover>
+                  <FormMessage />
+              </FormItem>
+          )} />
+          <FormField control={employeeForm.control} name="availableLeaveDays" render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Jours de conge</FormLabel>
+                  <FormControl><Input {...field} type="number" disabled={isContract && isEdit} /></FormControl>
                   <FormMessage />
               </FormItem>
           )} />
