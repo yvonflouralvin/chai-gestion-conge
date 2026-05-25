@@ -46,6 +46,22 @@ export default function DownloadPage({ id }: { id: string }) {
         exec();
     }, [])
 
+    const returnToWorkDate = React.useMemo(() => {
+        if (!leaveRequest?.endDate) return null;
+
+        const nextDay = new Date(leaveRequest.endDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        // 0 = dimanche, 6 = samedi
+        if (nextDay.getDay() === 6) {
+            nextDay.setDate(nextDay.getDate() + 2);
+        } else if (nextDay.getDay() === 0) {
+            nextDay.setDate(nextDay.getDate() + 1);
+        }
+
+        return nextDay;
+    }, [leaveRequest]);
+
     return <>
         {
             (employeed != null && leaveRequest != null )? <>
@@ -111,7 +127,7 @@ export default function DownloadPage({ id }: { id: string }) {
                             <p>Dates de congé : <span>Du {leaveRequest?.startDate.toLocaleDateString()}</span> <span>Au {leaveRequest?.endDate.toLocaleDateString()}</span></p>
                         </InfoZone>
                         <InfoZone>
-                            <p>Date de reprise du travail : </p>
+                            <p>Date de reprise du travail : {returnToWorkDate?.toLocaleDateString()}</p>
                         </InfoZone>
                         <InfoZone>
                             <p>Signature du travailleur</p>
