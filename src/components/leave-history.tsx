@@ -28,7 +28,7 @@ import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { calculateLeaveDays, cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { Info, Calendar as CalendarIcon, Loader2, History, DownloadIcon, FileDownIcon } from "lucide-react";
+import { Info, Calendar as CalendarIcon, Loader2, History, DownloadIcon, FileDownIcon, TrashIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
@@ -36,6 +36,7 @@ import { Label } from "./ui/label";
 import { leaveTypes } from "@/lib/data";
 import { LeaveRequestHistoryDialog } from "./leave-request-history-dialog";
 import Link from "next/link";
+import { LeaveRequestDeleteDialog } from "./leave-request-delete-dialog";
 
 type LeaveHistoryProps = {
   requests: LeaveRequest[];
@@ -72,6 +73,9 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
     // State for history dialog
     const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
     const [selectedHistoryRequest, setSelectedHistoryRequest] = useState<LeaveRequest | null>(null);
+
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [selectedDeleteRequest, setSelectedDeleteRequest] = useState<LeaveRequest | null>(null);
 
     useEffect(() => {
         if (selectedRequest) {
@@ -318,6 +322,16 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                                 size="sm" 
                                 variant="outline"
                                 onClick={() => {
+                                    setSelectedDeleteRequest(request);
+                                    setIsDeleteDialogOpen(true);
+                                }}
+                            >
+                                <TrashIcon className="h-4 w-4 mr-1" />
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => {
                                     setSelectedHistoryRequest(request);
                                     setIsHistoryDialogOpen(true);
                                 }}
@@ -361,7 +375,17 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                     </TableCell>
                   }
                   {!showActionsColumn && (
-                    <TableCell className="text-right">
+                    <TableCell className="text-right flex gap-[5px]">
+                        <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => {
+                                    setSelectedDeleteRequest(request);
+                                    setIsDeleteDialogOpen(true);
+                                }}
+                            >
+                                <TrashIcon className="h-4 w-4 mr-1" />
+                            </Button>
                       <Button 
                         size="sm" 
                         variant="outline"
@@ -471,6 +495,15 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
         if (!open) {
           setSelectedHistoryRequest(null);
         }
+      }}
+    />
+
+    <LeaveRequestDeleteDialog
+      request={selectedDeleteRequest}
+      open={isDeleteDialogOpen}
+      onClose={() => {
+        setIsDeleteDialogOpen(false);
+        setSelectedDeleteRequest(null);
       }}
     />
     </>

@@ -1,9 +1,19 @@
 
 'use server';
 
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { LeaveRequest, LeaveRequestStatus } from "@/types";
+
+
+export async function deleteLeaveRequest(id: string): Promise<void> {
+    try {
+        const docRef = doc(db, 'leave-requests', id);
+        await deleteDoc(docRef);
+    } catch (error) {
+        console.error(`Error deleting leave request ${id}:`, error);
+    }
+}
 
 
 export async function getLeaveRequestById(id: string): Promise<LeaveRequest | null> {
