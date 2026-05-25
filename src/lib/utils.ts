@@ -2,7 +2,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { eachDayOfInterval, isSunday, isSameDay, differenceInMonths, isWeekend } from 'date-fns';
-import type { Employee, Contract, EmployeeWithCurrentContract } from "@/types";
+import type { Employee, Contract, EmployeeWithCurrentContract, EmployeeRole } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -89,14 +89,22 @@ export function processEmployee(docData: any, docId: string): EmployeeWithCurren
     }));
 
     const employee: Employee = {
-        id: docId,
-        name: docData.name,
-        email: docData.email,
-        avatar: docData.avatar || `https://placehold.co/40x40.png`,
-        supervisorId: docData.supervisorId,
-        role: docData.role as Employee['role'],
-        contracts: contracts,
-        availableLeaveDays: docData.availableLeaveDays || 0,
+      id: docId,
+      name: docData.name,
+      email: docData.email,
+      avatar: docData.avatar || `https://placehold.co/40x40.png`,
+      supervisorId: docData.supervisorId,
+      role: [] as EmployeeRole[], //docData.role as Employee['role'],
+      contracts: contracts,
+      availableLeaveDays: docData.availableLeaveDays || 0,
+      contractEndDate: docData.contractEndDate || null,
+      contractStartDate: docData.contractStartDate || null
+    };
+
+    if(typeof docData.role === 'string') {
+      employee.role = [docData.role];
+    } else {
+      employee.role = docData.role;
     }
 
     const currentContract = getCurrentContract(employee);

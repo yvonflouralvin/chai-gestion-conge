@@ -122,7 +122,7 @@ export function LeaveRequestHistoryDialog({
       <DialogContent className="max-w-2xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>Historique de la demande de congé</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-black">
             Détails des différentes étapes de traitement de cette demande
           </DialogDescription>
         </DialogHeader>
@@ -147,14 +147,14 @@ export function LeaveRequestHistoryDialog({
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-semibold">{getActionLabel(entry.action)}</p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-gray-500">{getActionLabel(entry.action)}</p>
+                          <p className="text-sm text-black font-semibold">
                             par {entry.actorName} ({entry.actorRole})
                           </p>
                         </div>
                         <div className="text-right">
                           {getStatusBadge(entry.status)}
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-xs text-black mt-1">
                             {format(entry.timestamp, "PPP 'à' HH:mm")}
                           </p>
                         </div>

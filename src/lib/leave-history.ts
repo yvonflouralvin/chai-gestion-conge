@@ -13,7 +13,7 @@ export async function addLeaveRequestHistoryEntry(
   status: LeaveRequestStatus,
   actorId: string,
   actorName: string,
-  actorRole: EmployeeRole,
+  actorRole: EmployeeRole[],
   options?: {
     comment?: string;
     reason?: string;

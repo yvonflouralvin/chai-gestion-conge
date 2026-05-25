@@ -1,6 +1,7 @@
 
 "use client"
 
+import { Checkbox } from "@/components/ui/checkbox"
 import { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -28,11 +29,19 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/context/auth-context"
 
+const roles =  ["Employee", "Supervisor", "Manager", "Admin", "HR"] as const
+
 const employeeSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Please enter a valid email." }),
-  role: z.enum(["Employee", "Supervisor", "Manager", "Admin", "HR"]),
+  role: z.union([
+    z.enum(roles),
+    z.array(z.enum(roles))
+  ]).transform((value) =>
+    Array.isArray(value) ? value : [value]
+  ), //min(1, { message: "Select at least one role." }),
   supervisorId: z.string().nullable(),
+  availableLeaveDays: z.string().default(`0`)
 });
 
 const contractSchema = z.object({
@@ -70,8 +79,11 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
         employeeForm.reset({
             name: editingEmployee.name,
             email: editingEmployee.email,
-            role: editingEmployee.role,
+            role: Array.isArray(editingEmployee.role)
+                ? editingEmployee.role
+                : [editingEmployee.role],
             supervisorId: editingEmployee.supervisorId ? String(editingEmployee.supervisorId) : null,
+            availableLeaveDays: `${editingEmployee.availableLeaveDays ? editingEmployee.availableLeaveDays : 0}`
         });
         const currentContract = getCurrentContract(editingEmployee);
         if (currentContract) {
@@ -84,7 +96,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
             });
         }
     } else {
-        employeeForm.reset({ name: "", email: "", role: "Employee", supervisorId: null });
+        employeeForm.reset({ name: "", email: "", role: ["Employee"], supervisorId: null });
         contractForm.reset({ title: "", team: "", contractType: "Contrat-Staff", startDate: new Date(), endDate: null });
     }
   }, [editingEmployee, isAddDialogOpen, employeeForm, contractForm]);
@@ -185,6 +197,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
             name: values.name,
             role: values.role,
             supervisorId: getSupervisorIdValue(values),
+            availableLeaveDays: values.availableLeaveDays,
         });
 
         toast({
@@ -266,7 +279,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
     return supervisor?.name || "Unknown";
   };
 
-  const potentialSupervisors = employees.filter(e => e.id !== editingEmployee?.id && (e.role === 'Supervisor' || e.role === 'Manager' || e.role === 'Admin' || e.role === "HR"));
+  const potentialSupervisors = employees.filter(e => e.id !== editingEmployee?.id && (e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin') || e.role.includes("HR")));
 
   const FormFields = ({ isContract, isEdit }: { isContract?: boolean, isEdit?: boolean }) => (
     <>
@@ -304,22 +317,54 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
           )} />
 
           {!isContract && <>
-            <FormField control={employeeForm.control} name="role" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>
-                            <SelectItem value="Employee">Employee</SelectItem>
-                            <SelectItem value="Supervisor">Supervisor</SelectItem>
-                            <SelectItem value="Manager">Manager</SelectItem>
-                            <SelectItem value="Admin">Admin</SelectItem>
-                            <SelectItem value="HR">HR</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-            )} />
+            <FormField
+  control={employeeForm.control}
+  name="role"
+  render={() => (
+    <FormItem>
+      <FormLabel>Roles</FormLabel>
+
+      <div className="grid grid-cols-2 gap-2">
+        {roles.map((role) => (
+          <FormField
+                    key={role}
+                    control={employeeForm.control}
+                    name="role"
+                    render={({ field }) => {
+                    return (
+                        <FormItem
+                        key={role}
+                        className="flex flex-row items-start space-x-3 space-y-0"
+                        >
+                        <FormControl>
+                            <Checkbox
+                            checked={field.value?.includes(role)}
+                            onCheckedChange={(checked) => {
+                                return checked
+                                ? field.onChange([...field.value, role])
+                                : field.onChange(
+                                    field.value?.filter(
+                                        (value) => value !== role
+                                    )
+                                    )
+                            }}
+                            />
+                        </FormControl>
+
+                        <FormLabel className="font-normal">
+                            {role}
+                        </FormLabel>
+                        </FormItem>
+                    )
+                    }}
+                />
+                ))}
+            </div>
+
+            <FormMessage />
+            </FormItem>
+        )}
+        />
             <FormField control={employeeForm.control} name="supervisorId" render={({ field }) => (
                 <FormItem>
                     <FormLabel>Supervisor</FormLabel>
@@ -380,6 +425,13 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                       </div>
                       <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} />
                   </PopoverContent></Popover>
+                  <FormMessage />
+              </FormItem>
+          )} />
+          <FormField control={employeeForm.control} name="availableLeaveDays" render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Jours de conge</FormLabel>
+                  <FormControl><Input {...field} type="number" disabled={isContract && isEdit} /></FormControl>
                   <FormMessage />
               </FormItem>
           )} />
@@ -450,7 +502,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                         <TabsTrigger value="employee">Employee Details</TabsTrigger>
                         <TabsTrigger value="contract">New Contract</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="employee">
+                    <TabsContent value="employee" className="max-h-[calc(100vh-200px)] overflow-y-auto">
                         <Form {...employeeForm}>
                             <form onSubmit={employeeForm.handleSubmit(handleUpdateEmployee)} className="space-y-4 py-4">
                                 <FormFields isEdit />

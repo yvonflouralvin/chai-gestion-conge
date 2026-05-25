@@ -21,14 +21,14 @@ import {
 import {
   Badge
 } from "@/components/ui/badge";
-import type { EmployeeWithCurrentContract, LeaveRequest, LeaveRequestStatus } from "@/types";
+import type { EmployeeRole, EmployeeWithCurrentContract, LeaveRequest, LeaveRequestStatus } from "@/types";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { calculateLeaveDays, cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { Info, Calendar as CalendarIcon, Loader2, History, DownloadIcon, FileDownIcon } from "lucide-react";
+import { Info, Calendar as CalendarIcon, Loader2, History, DownloadIcon, FileDownIcon, TrashIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
@@ -36,6 +36,7 @@ import { Label } from "./ui/label";
 import { leaveTypes } from "@/lib/data";
 import { LeaveRequestHistoryDialog } from "./leave-request-history-dialog";
 import Link from "next/link";
+import { LeaveRequestDeleteDialog } from "./leave-request-delete-dialog";
 
 type LeaveHistoryProps = {
   requests: LeaveRequest[];
@@ -73,6 +74,9 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
     const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
     const [selectedHistoryRequest, setSelectedHistoryRequest] = useState<LeaveRequest | null>(null);
 
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [selectedDeleteRequest, setSelectedDeleteRequest] = useState<LeaveRequest | null>(null);
+
     useEffect(() => {
         if (selectedRequest) {
             setApprovalComment(selectedRequest.comment || "");
@@ -106,6 +110,16 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
         return Icon ? <Icon className="h-4 w-4 mr-2" /> : null;
     }
 
+    const addRequests = (requests: LeaveRequest[], _baseRequests: LeaveRequest[]) => {
+        const forAdd:LeaveRequest[] = []
+        requests.forEach(request => {
+            if (!_baseRequests.some((r:LeaveRequest) => r.id === request.id)) {
+                forAdd.push(request);
+            }
+        })
+        return forAdd;
+    }
+
     const getStatusBadge = (request: LeaveRequest) => {
         const status = request.status;
         
@@ -119,7 +133,7 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                         tooltipContent = <p><strong>{supervisor.name} (Supervisor):</strong> {request.supervisorReason}</p>
                     }
                 } else if (request.managerReason) {
-                    const manager = employees.find(e => e.role === 'Manager');
+                    const manager = employees.find(e => e.role.includes('Manager'));
                      if(manager) {
                         tooltipContent = <p><strong>{manager.name} (Manager):</strong> {request.managerReason}</p>
                      }
@@ -176,24 +190,25 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
             showActionsColumn = false;
             break;
         case 'approvals':
-            if (currentUser.role === 'Supervisor' ) {
+            if (currentUser.role.includes('Supervisor') ) {
                 title = "Team Leave Approvals";
                 description = "Review and act on pending leave requests from your team.";
                 const supervisedEmployeeIds = employees.filter(e => e.supervisorId === currentUser.id).map(e => e.id);
-                baseRequests = requests.filter(r => supervisedEmployeeIds.includes(r.employeeId) || r.supervisorId === currentUser.id);
+                baseRequests.push(...addRequests(requests.filter(r => supervisedEmployeeIds.includes(r.employeeId) || r.supervisorId === currentUser.id), baseRequests));
                 emptyStateMessage = "No pending requests from your team.";
                 showFilters = true;
-            } else if (currentUser.role === 'Manager') {
+            }
+            if (currentUser.role.includes('Manager')) {
                 title = "Pending My Approval";
                 description = "Review and act on pending leave requests.";
-                baseRequests = requests.filter(r => r.status === 'Pending Manager' || r.status === 'Approved' || r.status === 'Rejected' || r.supervisorId === currentUser.id);
+                baseRequests.push(...addRequests(requests.filter(r => r.status === 'Pending Manager' || r.status === 'Approved' || r.status === 'Rejected' || r.supervisorId === currentUser.id), baseRequests));
                 emptyStateMessage = "No pending requests.";
                 showFilters = true;
             }
-            else if (currentUser.role === 'HR') {
+            if (currentUser.role.includes('HR')) {
                 title = "Employee Leave Waiting for Approvals";
                 description = "Review and act on pending leave requests.";
-                baseRequests = requests.filter(r => r.status === 'Pending HR' || r.supervisorId === currentUser.id);
+                baseRequests.push(...addRequests(requests.filter(r => r.status === 'Pending HR' || r.supervisorId === currentUser.id), baseRequests));
                 emptyStateMessage = "No pending requests.";
                 showFilters = true;
             }
@@ -216,12 +231,15 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
     const handleApprove = async () => {
         if (!selectedRequest || !approvalStartDate || !approvalEndDate) return;
         setIsSubmitting(true);
+        
 
         const role = currentUser.role;
 
-        const _nextStatus = (role : string)=> {
-            if(role === "HR") return "Pending Supervisor";
-            return role === 'Supervisor' ? 'Pending Manager' : 'Approved';
+        const _nextStatus = (role : EmployeeRole[])=> {
+            if(role.includes("Supervisor") && selectedRequest.status === "Pending Supervisor") return "Pending Manager";
+            if(role.includes("Manager") && selectedRequest.status === "Pending Manager") return "Pending HR";
+            if(role.includes("HR") && selectedRequest.status === "Pending HR") return "Approved";
+            return "Approved";
         } 
 
         const nextStatus = _nextStatus(role);
@@ -296,9 +314,20 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                   <TableCell className="hidden sm:table-cell">{format(request.submissionDate, 'MMM d, yyyy')}</TableCell>
                   <TableCell className="text-center">{calculateLeaveDays(request.startDate, request.endDate)}</TableCell>
                   <TableCell>{getStatusBadge(request)}</TableCell>
-                  {showActionsColumn && 
+                  { 
+                    showActionsColumn && 
                     <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
+                            <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => {
+                                    setSelectedDeleteRequest(request);
+                                    setIsDeleteDialogOpen(true);
+                                }}
+                            >
+                                <TrashIcon className="h-4 w-4 mr-1" />
+                            </Button>
                             <Button 
                                 size="sm" 
                                 variant="outline"
@@ -308,10 +337,9 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                                 }}
                             >
                                 <History className="h-4 w-4 mr-1" />
-                                Historiques
                             </Button>
                             {
-                                (request.status === 'Approved' || request.status === 'Rejected' || (currentUser.role === 'Supervisor' && request.status !== 'Pending Supervisor') || (currentUser.role === 'Manager' && request.status !== 'Pending Manager')) == false ?
+                                (request.status === 'Approved' || request.status === 'Rejected' || (currentUser.role.   includes('Supervisor') && request.status !== 'Pending Supervisor') || (currentUser.role.includes('Manager') && request.status !== 'Pending Manager')) == false ?
                                <>
                                
                                <Button 
@@ -339,7 +367,7 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                                 </DialogContent>
                             </Dialog>
                                </>
-                                : <><p className="text-muted-foreground text-sm">No actions available</p></>
+                                : <><p className="text-muted-foreground text-xs">No actions available</p></>
                             }
                            
                             
@@ -347,7 +375,17 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                     </TableCell>
                   }
                   {!showActionsColumn && (
-                    <TableCell className="text-right">
+                    <TableCell className="text-right flex gap-[5px]">
+                        <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => {
+                                    setSelectedDeleteRequest(request);
+                                    setIsDeleteDialogOpen(true);
+                                }}
+                            >
+                                <TrashIcon className="h-4 w-4 mr-1" />
+                            </Button>
                       <Button 
                         size="sm" 
                         variant="outline"
@@ -357,7 +395,6 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                         }}
                       >
                         <History className="h-4 w-4 mr-1" />
-                        Historiques
                       </Button>
                     </TableCell>
                   )}
@@ -458,6 +495,15 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
         if (!open) {
           setSelectedHistoryRequest(null);
         }
+      }}
+    />
+
+    <LeaveRequestDeleteDialog
+      request={selectedDeleteRequest}
+      open={isDeleteDialogOpen}
+      onClose={() => {
+        setIsDeleteDialogOpen(false);
+        setSelectedDeleteRequest(null);
       }}
     />
     </>
