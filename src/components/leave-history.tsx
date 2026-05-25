@@ -318,7 +318,8 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                     showActionsColumn && 
                     <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
-                            <Button 
+                            {
+                                (currentUser.role.includes("HR") || currentUser.role.includes("Admin") ) &&  <Button 
                                 size="sm" 
                                 variant="outline"
                                 onClick={() => {
@@ -328,6 +329,8 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                             >
                                 <TrashIcon className="h-4 w-4 mr-1" />
                             </Button>
+                            }
+                           
                             <Button 
                                 size="sm" 
                                 variant="outline"
@@ -339,7 +342,14 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                                 <History className="h-4 w-4 mr-1" />
                             </Button>
                             {
-                                (request.status === 'Approved' || request.status === 'Rejected' || (currentUser.role.   includes('Supervisor') && request.status !== 'Pending Supervisor') || (currentUser.role.includes('Manager') && request.status !== 'Pending Manager')) == false ?
+                                (
+                                    (
+                                    (request.status === 'Pending Supervisor' && currentUser.role.includes('Supervisor')) ||
+                                    (request.status === 'Pending Manager' && currentUser.role.includes('Manager')) ||
+                                    (request.status === 'Pending HR' && currentUser.role.includes('HR'))
+                                )
+                            ) 
+                                        ?
                                <>
                                
                                <Button 
@@ -353,7 +363,7 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                             </Button>
                             <Dialog onOpenChange={(open) => { if(!open) { setRejectionReason(""); setSelectedRequest(null); }}}>
                                 <DialogTrigger asChild>
-                                    <Button size="sm" variant="destructive" onClick={() => setSelectedRequest(request)} disabled={request.status === 'Approved' || request.status === 'Rejected'}>Reject</Button>
+                                    <Button size="sm" variant="destructive" onClick={() => setSelectedRequest(request)} disabled={(request.status as LeaveRequestStatus) in ["Rejected", "Approved"]}>Reject</Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogHeader>
@@ -376,7 +386,8 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                   }
                   {!showActionsColumn && (
                     <TableCell className="text-right flex gap-[5px]">
-                        <Button 
+                       {
+                                (currentUser.role.includes("HR") || currentUser.role.includes("Admin") ) &&  <Button 
                                 size="sm" 
                                 variant="outline"
                                 onClick={() => {
@@ -386,6 +397,7 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
                             >
                                 <TrashIcon className="h-4 w-4 mr-1" />
                             </Button>
+                            }
                       <Button 
                         size="sm" 
                         variant="outline"
