@@ -46,12 +46,7 @@ export type LeaveType = {
   subTypes?: CircumstanceType[];
 };
 
-export type LeaveRequestStatus =
-  | "Pending Supervisor"
-  | "Pending Manager"
-  | "Pending HR"
-  | "Approved"
-  | "Rejected";
+export type LeaveRequestStatus = | "Pending Supervisor" | "Pending Manager" | "Pending HR" | "Approved" | "Rejected";
 
 export type LeaveRequest = {
   id: string;
