@@ -2,12 +2,12 @@
 "use client"
 
 import { Checkbox } from "@/components/ui/checkbox"
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { format } from "date-fns"
-import { CalendarIcon, Edit, UserPlus, X, Loader2 } from "lucide-react"
+import { CalendarIcon, Edit, UserPlus, X, Loader2, LockIcon } from "lucide-react"
 import { collection, doc, setDoc, updateDoc, arrayUnion, DocumentReference, runTransaction } from "firebase/firestore";
 import { createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
@@ -28,6 +28,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/context/auth-context"
+import ResetPasswordDialog from "./admin/employee/ResetPasswordDialog"
 
 const roles =  ["Employee", "Supervisor", "Manager", "Admin", "HR"] as const
 
@@ -63,8 +64,13 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
   const { currentUser } = useAuth();
   const [isFormSubmitting, setIsFormSubmitting] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<EmployeeWithCurrentContract | null>(null);
+
+  const [editingPassword, setEditingPassword] = React.useState< string>("")
+  const [isChangingPassword, setIsChangingPassword] = React.useState(false)
+
 
   const employeeForm = useForm<z.infer<typeof employeeSchema>>({
     resolver: zodResolver(employeeSchema),
@@ -105,7 +111,45 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
     setEditingEmployee(employee);
     setIsEditDialogOpen(true);
   };
+
+
+  const handleResetPasswordClick = (employee: EmployeeWithCurrentContract) => {
+    setEditingEmployee(employee);
+    setIsResetPasswordDialogOpen(true);
+  };
+
+  const handleSetEmployePassword = async ()=>{
+    if(isChangingPassword === true) return; 
+    setIsChangingPassword(true)
+    if(editingPassword.length < 6) return ;
+    console.log("send request ...")
+    const response = await fetch(
+    `/api/users/${editingEmployee?.id}/password`,
+    {
+        method: 'PATCH',
+        headers: {
+        'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+        password: editingPassword,
+        }),
+    }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+    throw new Error(result.error);
+    }
+
+    console.log(result.message);
+    setIsChangingPassword(false)
+    setEditingEmployee(null);
+    setIsResetPasswordDialogOpen(false);
+    setEditingPassword("");
+  }
   
+
   const handleDialogClose = () => {
     setEditingEmployee(null);
     setIsEditDialogOpen(false);
@@ -189,6 +233,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
   }
 
   async function handleUpdateEmployee(values: z.infer<typeof employeeSchema>) {
+
     if (!editingEmployee) return;
     setIsFormSubmitting(true);
     try {
@@ -482,8 +527,15 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                     <TableCell className="text-right">
                     <Button variant="outline" size="icon" onClick={() => handleEditClick(employee)}>
                         <Edit className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
+                        {/* <span className="sr-only">Edit</span> */}
                     </Button>
+                    {
+                        currentUser?.role.includes("Admin") && (
+                            <Button variant="outline" size="icon" onClick={() => handleResetPasswordClick(employee)}>
+                            <LockIcon className="h-4 w-4"/>
+                        </Button>
+                        )
+                    }
                     </TableCell>
                 </TableRow>
                 ))}
@@ -572,6 +624,47 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
             )}
           </DialogContent>
         </Dialog>
+
+        
+
+        {/* <ResetPasswordDialog
+            isOpen={isResetPasswordDialogOpen}
+            employee={editingEmployee}
+            handleClose={() => setIsResetPasswordDialogOpen(false)}
+        /> */}
+
+        <Dialog open={isResetPasswordDialogOpen} onOpenChange={(open)=>{
+            if(open === true)return
+            setEditingEmployee(null)
+            setIsResetPasswordDialogOpen(false)
+        }}>
+                <DialogContent className="sm:max-w-3xl">
+                <DialogHeader>
+                    <DialogTitle>Reset Password : {editingEmployee?.name}</DialogTitle>
+                </DialogHeader>
+                {isResetPasswordDialogOpen && (
+                    <div>
+                        <Input disabled={isChangingPassword} onChange={e => setEditingPassword(e.target.value)} placeholder='New password :' type="text" defaultValue={""} />
+                    </div>
+                )}
+                <DialogFooter>
+                    <div className="flex gap-[5px]">
+                        {
+                            isChangingPassword === true ? <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            </>:
+                            <>
+                            <Button type="button" variant="outline" onClick={()=>setIsResetPasswordDialogOpen(false)}>Annuler</Button>
+                        <Button type="button" variant="default" onClick={handleSetEmployePassword}>Continuer</Button>
+                            </>
+                        }
+                       
+                    </div>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+            
+
       </CardContent>
     </Card>
   );

@@ -28,7 +28,7 @@ async function sendEmail(details: EmailDetails) {
             subject: details.subject,
             body: details.body,
         }),
-        });
+    });
     console.log("---------------------");
     // In a real app, you would have your email sending logic here.
     // Example:
@@ -47,12 +47,12 @@ function generateLeaveRequestDetailsHtml(
     const leaveTypeName = leaveType?.name || 'Unknown';
     const circumstanceType = request.circumstanceType ? ` (${request.circumstanceType})` : '';
     const fullLeaveTypeName = leaveTypeName + circumstanceType;
-    
+
     const formattedStartDate = format(request.startDate, "PPP");
     const formattedEndDate = format(request.endDate, "PPP");
     const formattedSubmissionDate = format(request.submissionDate, "PPP");
     const totalDays = calculateLeaveDays(request.startDate, request.endDate);
-    
+
     let detailsHtml = `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <h2 style="color: #2563eb;">Détails de la demande de congé</h2>
@@ -82,7 +82,7 @@ function generateLeaveRequestDetailsHtml(
                     <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${formattedSubmissionDate}</td>
                 </tr>
     `;
-    
+
     if (request.documentUrl) {
         detailsHtml += `
                 <tr>
@@ -91,11 +91,11 @@ function generateLeaveRequestDetailsHtml(
                 </tr>
         `;
     }
-    
+
     detailsHtml += `
             </table>
     `;
-    
+
     return detailsHtml;
 }
 
@@ -141,7 +141,7 @@ export async function sendLeaveRequestSubmittedEmail(props: SubmittedEmailProps)
         console.error(`Supervisor with id ${employee.supervisorId} not found.`);
         return;
     }
-    
+
     const detailsHtml = generateLeaveRequestDetailsHtml(request, employee, leaveTypes);
     const subject = `Nouvelle demande de congé de ${employee.name}`;
     const body = `
@@ -174,7 +174,7 @@ export async function sendLeaveRequestUpdatedEmail(props: UpdatedEmailProps) {
     }
 
     const detailsHtml = generateLeaveRequestDetailsHtml(request, employee, leaveTypes);
-    const actorRole = actor.role === 'HR' ? 'RH' : actor.role === 'Supervisor' ? 'Superviseur' : actor.role === 'Manager' ? 'Manager' : actor.role;
+    const actorRole = actor.role.includes('HR') ? 'RH' : actor.role.includes('Supervisor') ? 'Superviseur' : actor.role.includes('Manager') ? 'Manager' : actor.role;
 
     // Build comments section with all comments from the approval chain
     let commentsHtml = '';
@@ -225,7 +225,7 @@ export async function sendLeaveRequestUpdatedEmail(props: UpdatedEmailProps) {
     // Scenario 2: Supervisor approves, notify Manager
     if (request.status === 'Pending Manager') {
         const manager = await getManager();
-        
+
         if (manager) {
             const subject = `Demande de congé de ${employee.name} - Approbation requise`;
             const body = `

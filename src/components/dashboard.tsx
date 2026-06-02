@@ -33,13 +33,13 @@ export function Dashboard({ leaveRequests, employees, currentUser }: DashboardPr
     // Filtrage des demandes selon le rôle
     let filteredRequests = leaveRequests;
     
-    if (currentUser.role === "Manager") {
+    if (currentUser.role.includes("Manager")) {
       // Manager voit les demandes de son équipe
       const teamEmployeeIds = employees
         .filter(emp => emp.supervisorId === currentUser.id || emp.id === currentUser.id)
         .map(emp => emp.id);
       filteredRequests = leaveRequests.filter(req => teamEmployeeIds.includes(req.employeeId));
-    } else if (currentUser.role === "Supervisor") {
+    } else if (currentUser.role.includes("Supervisor")) {
       // Supervisor voit les demandes de son équipe
       const teamEmployeeIds = employees
         .filter(emp => emp.supervisorId === currentUser.id || emp.id === currentUser.id)

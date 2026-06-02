@@ -5,7 +5,6 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { db } from "@/lib/firebase";
 import { processEmployee } from "@/lib/utils";
 import type { EmployeeWithCurrentContract } from "@/types";
-
 /**
  * Retrieves a single employee's processed data from Firestore by their ID.
  * @param employeeId The UID of the employee to fetch.
@@ -76,3 +75,6 @@ export async function getManager(): Promise<EmployeeWithCurrentContract|null> {
         return null;
     }
 }
+
+
+
