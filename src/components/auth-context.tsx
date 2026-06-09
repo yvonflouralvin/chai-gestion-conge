@@ -21,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+     console.log("AUTH PROVIDER MOUNT");
     const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
       if (user) {
         const userDocRef = doc(db, 'users', user.uid);
@@ -42,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setLoading(false);
     });
-
+    console.log("AUTH PROVIDER UNMOUNT");
     return () => unsubscribe();
   }, []);
 

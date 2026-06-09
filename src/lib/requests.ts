@@ -4,6 +4,7 @@
 import { collection, query, where, getDocs, doc, getDoc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { LeaveRequest, LeaveRequestStatus } from "@/types";
+import { leaveTypes } from "./data";
 
 
 export async function deleteLeaveRequest(id: string): Promise<void> {
@@ -91,4 +92,3 @@ export async function getLeaveRequestsByEmployeeId(employeeId: string): Promise<
         return [];
     }
 }
-

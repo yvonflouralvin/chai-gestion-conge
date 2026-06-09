@@ -31,7 +31,9 @@ export default function SignInPage() {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/");
+      setTimeout(() => {
+        router.push("/");
+      }, 2000);
     } catch (error: any) {
       toast({
         variant: "destructive",

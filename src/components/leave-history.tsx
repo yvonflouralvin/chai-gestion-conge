@@ -37,6 +37,7 @@ import { leaveTypes } from "@/lib/data";
 import { LeaveRequestHistoryDialog } from "./leave-request-history-dialog";
 import Link from "next/link";
 import { LeaveRequestDeleteDialog } from "./leave-request-delete-dialog";
+import { getLeaveTypeName } from "./LeaveHistory";
 
 type LeaveHistoryProps = {
   requests: LeaveRequest[];
@@ -50,12 +51,23 @@ type LeaveHistoryProps = {
         comment?: string;
         startDate?: Date;
         endDate?: Date;
+        audit?: {
+            changedBy: string;
+            role: EmployeeRole[];
+            changes: any;
+            date: Date;
+        }
     }
   ) => void;
   view: "personal" | "approvals" | "all" ; 
 };
 
 type StatusFilter = LeaveRequestStatus | "All";
+
+export const getLeaveTypeIcon = (id: number) => {
+    const Icon = leaveTypes.find(lt => lt.id === id)?.icon;
+    return Icon ? <Icon className="h-4 w-4 mr-2" /> : null;
+}
 
 export function LeaveHistory({ requests, employees, currentUser, updateRequestStatus, view }: LeaveHistoryProps) {
     const { toast } = useToast();
@@ -96,19 +108,7 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
 
     const getEmployeeName = (id: number | string) => employees.find(e => e.id === id)?.name || 'Unknown';
     
-    const getLeaveTypeName = (request: LeaveRequest) => {
-        const leaveType = leaveTypes.find(lt => lt.id === request.leaveTypeId);
-        if (!leaveType) return 'Unknown';
-        if (leaveType.id === 4 && request.circumstanceType) { // Circumstance Leave
-            return `${leaveType.name} (${request.circumstanceType})`;
-        }
-        return leaveType.name;
-    };
-    
-    const getLeaveTypeIcon = (id: number) => {
-        const Icon = leaveTypes.find(lt => lt.id === id)?.icon;
-        return Icon ? <Icon className="h-4 w-4 mr-2" /> : null;
-    }
+   
 
     const addRequests = (requests: LeaveRequest[], _baseRequests: LeaveRequest[]) => {
         const forAdd:LeaveRequest[] = []
@@ -244,11 +244,32 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
         } 
 
         const nextStatus = _nextStatus(role);
+        const changes: any = {};
+
+        if (selectedRequest.startDate !== approvalStartDate) {
+            changes.startDate = {
+                old: selectedRequest.startDate,
+                new: approvalStartDate,
+            };
+        }
+
+        if (selectedRequest.endDate !== approvalEndDate) {
+            changes.endDate = {
+                old: selectedRequest.endDate,
+                new: approvalEndDate,
+            };
+        }
         
         await updateRequestStatus(selectedRequest.id, nextStatus, {
             comment: approvalComment,
             startDate: approvalStartDate,
             endDate: approvalEndDate,
+            audit: {
+                changedBy: currentUser.id,
+                role: currentUser.role,
+                changes,
+                date: new Date(),
+            }
         });
 
         toast({ title: "Request Approved", description: `The request has been updated and moved to ${nextStatus}.`});
@@ -257,8 +278,30 @@ export function LeaveHistory({ requests, employees, currentUser, updateRequestSt
     }
 
     const handleReject = () => {
+        const changes: any = {};
         if (selectedRequest && rejectionReason) {
-            updateRequestStatus(selectedRequest.id, 'Rejected', { reason: rejectionReason });
+            if (selectedRequest.startDate !== approvalStartDate) {
+            changes.startDate = {
+                old: selectedRequest.startDate,
+                new: approvalStartDate,
+            };
+        }
+
+        if (selectedRequest.endDate !== approvalEndDate) {
+            changes.endDate = {
+                old: selectedRequest.endDate,
+                new: approvalEndDate,
+            };
+        }
+            updateRequestStatus(selectedRequest.id, 'Rejected', { 
+                reason: rejectionReason,
+                audit: {
+                    changedBy: currentUser.id,
+                    role: currentUser.role,
+                    changes,
+                    date: new Date(),
+                }
+            });
             setRejectionReason("");
             setSelectedRequest(null);
         } else {

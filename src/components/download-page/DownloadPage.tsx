@@ -5,7 +5,14 @@ import React from 'react'
 import { getLeaveRequestById } from '@/lib/requests'
 import { LeaveRequest, Employee, LeaveRequestHistoryEntry } from '@/types'
 import { getEmployeeById } from '@/lib/employee'
-import { getLeaveRequestHistory } from '@/lib/leave-history'
+import { getLeaveRequestHistory, getWorkingDays } from '@/lib/leave-history'
+import { leaveTypes } from '@/lib/data'
+
+const getLeaveTypeIcon = (id: number) => {
+    const Icon = leaveTypes.find(lt => lt.id === id)?.icon;
+    return Icon ? <Icon className="h-4 w-4" /> : null;
+}
+
 interface InfoZoneProps {
     children: React.ReactNode
 }
@@ -91,29 +98,39 @@ export default function DownloadPage({ id }: { id: string }) {
                             <p>Type de congé sollicité</p>
                         </InfoZone>
                         <InfoZone>
-                            <div className="flex">
-                                <div>
+                            <div className="flex gap-[10px]">
+                                {
+                                    leaveTypes.map((leaveType) => {
+                                        return <div className="flex gap-[4px]" key={leaveType.name}>
+                                            <input type="checkbox" contentEditable={false} readOnly={true} checked={leaveRequest?.leaveTypeId === leaveType.id ? true : false} /> 
+                                            {getLeaveTypeIcon(leaveType.id)}
+                                            <p>{leaveType.name}</p>
+                                        </div>
+                                    })
+                                }
+
+                                {/* <div>
                                     <div className='flex gap-[4px]'>
-                                        <input type="checkbox" contentEditable={false} defaultChecked={leaveRequest?.leaveTypeId === 1} checked={leaveRequest?.leaveTypeId === 1}/> <p>Congé annuel</p>
+                                        <input type="checkbox" contentEditable={false} readOnly={true} checked={leaveRequest?.leaveTypeId === 1 ? true : false} /> <p>Congé annuel</p>
                                     </div>
                                     <div className='flex gap-[4px]'>
-                                        <input type="checkbox"  contentEditable={false}  defaultChecked={leaveRequest?.leaveTypeId === 2} checked={leaveRequest?.leaveTypeId === 2}/> <p>Congé de mariage</p>
+                                        <input type="checkbox"  contentEditable={false}  readOnly={true} checked={leaveRequest?.leaveTypeId === 2 ? true : false} /> <p>Congé de mariage</p>
                                     </div>
                                     <div className='flex gap-[4px]'>
-                                        <input type="checkbox"  contentEditable={false}  defaultChecked={leaveRequest?.leaveTypeId === 3} checked={leaveRequest?.leaveTypeId === 3}/> <p>Décès</p>
+                                        <input type="checkbox"  contentEditable={false}  readOnly={true} checked={leaveRequest?.leaveTypeId === 3 ? true : false} /> <p>Décès</p>
                                     </div>
                                     <div className='flex gap-[4px]'>
-                                        <input type="checkbox"  contentEditable={false}  defaultChecked={leaveRequest?.leaveTypeId === 6} checked={leaveRequest?.leaveTypeId === 4}/> <p>Autres (à préciser): ........</p>
+                                        <input type="checkbox"  contentEditable={false}  readOnly={true} checked={leaveRequest?.leaveTypeId === 6 ? true : false} /> <p>Autres (à préciser): ........</p>
                                     </div>
                                 </div>
                                 <div>
                                     <div className='flex gap-[4px]'>
-                                        <input type="checkbox"  contentEditable={false}  defaultChecked={leaveRequest?.leaveTypeId === 5} /> <p>Congé non payé</p>
+                                        <input type="checkbox"  contentEditable={false}  readOnly={true} checked={leaveRequest?.leaveTypeId === 5 ? true : false} /> <p>Congé non payé</p>
                                     </div>
                                     <div className='flex gap-[4px]'>
-                                        <input type="checkbox"  contentEditable={false}  defaultChecked={leaveRequest?.leaveTypeId === 4} /> <p>Congé de maternité</p>
+                                        <input type="checkbox"  contentEditable={false}  readOnly={true} checked={leaveRequest?.leaveTypeId === 4 ? true : false} /> <p>Congé de maternité</p>
                                     </div>
-                                </div>
+                                </div */ }
                             </div>
                         </InfoZone>
                         <InfoZone>
@@ -121,7 +138,7 @@ export default function DownloadPage({ id }: { id: string }) {
                             <p>* Nombre de jours restant sur la période du contrat : {employeed.availableLeaveDays}</p>
                         </InfoZone>
                         <InfoZone>
-                            <p>Nombre de jours sollicité : {leaveRequest?.endDate.getDate() - leaveRequest?.startDate.getDate()}</p>
+                            <p>Nombre de jours sollicité :  {getWorkingDays(leaveRequest?.startDate, leaveRequest?.endDate, true)}</p>
                         </InfoZone>
                         <InfoZone>
                             <p>Dates de congé : <span>Du {leaveRequest?.startDate.toLocaleDateString()}</span> <span>Au {leaveRequest?.endDate.toLocaleDateString()}</span></p>
@@ -139,10 +156,10 @@ export default function DownloadPage({ id }: { id: string }) {
                         <InfoZone>
                             <>
                                 <div className='flex gap-[4px]'>
-                                    <input type="checkbox" defaultChecked  contentEditable={false} checked/> <p>Approuvé</p>
+                                    <input type="checkbox" checked={true}  contentEditable={false} readOnly={true} /> <p>Approuvé</p>
                                 </div>
                                 <div className='flex gap-[4px]'>
-                                    <input type="checkbox" /> <p>Rejeté</p>
+                                    <input type="checkbox" readOnly={true} checked={false}/> <p>Rejeté</p>
                                 </div>
                             </>
                         </InfoZone>
