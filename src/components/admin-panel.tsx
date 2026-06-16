@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { format } from "date-fns"
 import { CalendarIcon, Edit, UserPlus, X, Loader2, LockIcon } from "lucide-react"
-import { collection, doc, setDoc, updateDoc, arrayUnion, DocumentReference, runTransaction } from "firebase/firestore";
+import { collection, doc, setDoc, updateDoc, DocumentReference, runTransaction } from "firebase/firestore";
 import { createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 
@@ -93,12 +93,15 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
         });
         const currentContract = getCurrentContract(editingEmployee);
         if (currentContract) {
+            // Pré-remplit poste/équipe/type par commodité (souvent identiques en cas de
+            // renouvellement), mais force des dates "nouveau contrat" (pas celles de
+            // l'ancien) pour éviter de soumettre involontairement un doublon du contrat actuel.
             contractForm.reset({
                 title: currentContract.title,
                 team: currentContract.team,
                 contractType: currentContract.contractType,
-                startDate: currentContract.startDate,
-                endDate: currentContract.endDate,
+                startDate: new Date(),
+                endDate: null,
             });
         }
     } else {
@@ -287,12 +290,39 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                 throw "Employee does not exist!";
             }
 
-            // Calculate the difference in leave days
             const currentLeaveDays = employeeDoc.data().availableLeaveDays || 0;
             const updatedLeaveDays =  newLeaveDays + currentLeaveDays ;
 
+            // On reconstruit le tableau explicitement (au lieu de arrayUnion) car
+            // arrayUnion ignore silencieusement l'ajout si newContract est égal
+            // à un contrat déjà présent (ex: renouvellement avec mêmes poste/équipe).
+            const existingContracts = employeeDoc.data().contracts || [];
+
+            // Clôture automatiquement l'ancien contrat "en cours" (sans date de fin) s'il
+            // est antérieur au nouveau, pour éviter que deux contrats se chevauchent et que
+            // getCurrentContract() (qui prend le startDate le plus récent) désigne le mauvais
+            // contrat comme actuel. Sans ça, un contrat ouvert plus tôt mais saisi plus tard
+            // (ex: contrat réel rétroactif vs ancien contrat placeholder) peut rester masqué.
+            let latestIndex = -1;
+            existingContracts.forEach((c: any, i: number) => {
+                if (latestIndex === -1 || c.startDate.toMillis() > existingContracts[latestIndex].startDate.toMillis()) {
+                    latestIndex = i;
+                }
+            });
+            let updatedExistingContracts = existingContracts;
+            if (latestIndex !== -1) {
+                const previousCurrent = existingContracts[latestIndex];
+                if (!previousCurrent.endDate && newContract.startDate.getTime() > previousCurrent.startDate.toMillis()) {
+                    const dayBeforeNewContract = new Date(newContract.startDate);
+                    dayBeforeNewContract.setDate(dayBeforeNewContract.getDate() - 1);
+                    updatedExistingContracts = existingContracts.map((c: any, i: number) =>
+                        i === latestIndex ? { ...c, endDate: dayBeforeNewContract } : c
+                    );
+                }
+            }
+
             transaction.update(employeeRef, {
-                contracts: arrayUnion(newContract),
+                contracts: [...updatedExistingContracts, newContract],
                 availableLeaveDays: updatedLeaveDays
             });
         });
@@ -326,7 +356,13 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
 
   const potentialSupervisors = employees.filter(e => e.id !== editingEmployee?.id && (e.role.includes('Supervisor') || e.role.includes('Manager') || e.role.includes('Admin') || e.role.includes("HR")));
 
-  const FormFields = ({ isContract, isEdit }: { isContract?: boolean, isEdit?: boolean }) => (
+  const FormFields = ({ isContract, isEdit }: { isContract?: boolean, isEdit?: boolean }) => {
+    // Champs liés au contrat : affichés sur l'onglet "New Contract" et à la création
+    // d'un employé (un premier contrat est requis), mais pas sur l'onglet "Employee
+    // Details" d'un employé existant (ils partageaient sinon le même contractForm que
+    // l'onglet contrat, au risque de polluer/dupliquer les données du contrat en cours).
+    const showContractFields = isContract || !isEdit;
+    return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {!isContract && <>
@@ -346,6 +382,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
             )} />
           </>}
 
+          {showContractFields && <>
           <FormField control={contractForm.control} name="title" render={({ field }) => (
               <FormItem>
                   <FormLabel>Job Title</FormLabel>
@@ -360,6 +397,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                   <FormMessage />
               </FormItem>
           )} />
+          </>}
 
           {!isContract && <>
             <FormField
@@ -425,6 +463,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
             )} />
           </>}
           
+          {showContractFields && <>
           <FormField control={contractForm.control} name="contractType" render={({ field }) => (
               <FormItem>
                   <FormLabel>Contract Type</FormLabel>
@@ -439,7 +478,7 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                   <FormMessage />
               </FormItem>
           )} />
-          
+
           <FormField control={contractForm.control} name="startDate" render={({ field }) => (
               <FormItem className="flex flex-col">
                   <FormLabel>Contract Start Date</FormLabel>
@@ -473,16 +512,18 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
                   <FormMessage />
               </FormItem>
           )} />
-          <FormField control={employeeForm.control} name="availableLeaveDays" render={({ field }) => (
+          </>}
+          {!isContract && <FormField control={employeeForm.control} name="availableLeaveDays" render={({ field }) => (
               <FormItem>
                   <FormLabel>Jours de conge</FormLabel>
                   <FormControl><Input {...field} type="number" disabled={isContract && isEdit} /></FormControl>
                   <FormMessage />
               </FormItem>
-          )} />
+          )} />}
       </div>
     </>
-  );
+    );
+  };
 
   return (
     <Card>

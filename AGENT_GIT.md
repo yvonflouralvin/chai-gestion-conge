@@ -30,14 +30,14 @@ Exemples : `claude-feature/dashboard-stats`, `claude-fix/calcul-jours-negatifs`,
    - `npm run build` (ou `yarn build`)
    - `npm run lint` si pertinent
    - Test manuel du parcours concerné si c'est une feature UI (voir skill `/run` ou `/verify`)
-5. Une fois la modif testée et terminée, et seulement à ce moment : pousser la branche et créer une PR ciblant `claude`.
+5. Une fois la modif testée et terminée : **pousser systématiquement la branche et créer une PR ciblant `claude`**, sans attendre une nouvelle confirmation à chaque fois — ce fichier vaut autorisation permanente pour cette action précise (push + `gh pr create` vers `claude`, jamais vers `build`/`dev`). Ne pas s'arrêter à l'étape "commit local" : terminer la tâche signifie aller jusqu'à la PR ouverte.
 6. Ne jamais committer directement sur `claude`, `build` ou `dev`.
 
 ## Avant de pousser / créer une PR
 
-- Toujours demander confirmation à l'utilisateur avant `git push` et avant `gh pr create` (actions visibles/partagées — voir règles générales de l'agent).
-- Ne pousser que si les vérifications de l'étape 4 sont passées.
+- Pousser et ouvrir la PR vers `claude` dès que les vérifications de l'étape 4 sont passées — c'est l'action par défaut en fin de tâche, pas une option à proposer.
 - Mettre à jour la documentation (`docs/<module>/INDEX.md`, voir [AGENT.md](AGENT.md)) si la modification le justifie, **avant** d'ouvrir la PR.
+- Cette autorisation reste limitée à `push`/`gh pr create` vers `claude` : toute opération destructive (force-push, reset --hard, push vers `build`/`dev`, etc.) nécessite toujours une confirmation explicite au cas par cas.
 
 ## Commits
 

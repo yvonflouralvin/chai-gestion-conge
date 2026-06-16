@@ -7,6 +7,7 @@ import { LeaveRequest, Employee, LeaveRequestHistoryEntry } from '@/types'
 import { getEmployeeById } from '@/lib/employee'
 import { getLeaveRequestHistory, getWorkingDays } from '@/lib/leave-history'
 import { leaveTypes } from '@/lib/data'
+import { calculateLeaveDays } from '@/lib/utils'
 
 const getLeaveTypeIcon = (id: number) => {
     const Icon = leaveTypes.find(lt => lt.id === id)?.icon;
@@ -68,6 +69,14 @@ export default function DownloadPage({ id }: { id: string }) {
 
         return nextDay;
     }, [leaveRequest]);
+
+    // Jours ouvres restants sur le contrat actif (aujourd'hui -> fin du contrat),
+    // hors samedis/dimanches et jours feries (cf. publicHolidays dans lib/utils.ts).
+    // null = contrat sans date de fin (en cours indetermine).
+    const remainingContractDays = React.useMemo(() => {
+        if (!employeed?.contractEndDate) return null;
+        return calculateLeaveDays(new Date(), employeed.contractEndDate);
+    }, [employeed]);
 
     return <>
         {
@@ -135,7 +144,7 @@ export default function DownloadPage({ id }: { id: string }) {
                         </InfoZone>
                         <InfoZone>
                             <p>* Période du contrat : {employeed.contractStartDate?.toLocaleDateString()} - {employeed.contractEndDate?.toLocaleDateString()}</p>
-                            <p>* Nombre de jours restant sur la période du contrat : {employeed.availableLeaveDays}</p>
+                            <p>* Nombre de jours restant sur la période du contrat : {remainingContractDays !== null ? remainingContractDays : 'Indéterminé (contrat sans date de fin)'}</p>
                         </InfoZone>
                         <InfoZone>
                             <p>Nombre de jours sollicité :  {getWorkingDays(leaveRequest?.startDate, leaveRequest?.endDate, true)}</p>

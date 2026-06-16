@@ -11,6 +11,7 @@ Page publique générant un formulaire de demande de congé imprimable (mise en 
 ## Comportement notable
 
 - `getWorkingDays` (`src/lib/leave-history.ts`) est utilisé ici pour afficher le nombre de jours sollicités — **pas** `calculateLeaveDays` (`src/lib/utils.ts`). Les deux fonctions n'excluent pas les mêmes jours fériés (voir [`docs/leave-history/`](../leave-history/INDEX.md)).
+- "Nombre de jours restant sur la période du contrat" est calculé avec `calculateLeaveDays(new Date(), employeed.contractEndDate)` (jours ouvrés entre **aujourd'hui** et la fin du contrat actif, hors week-ends et jours fériés de `publicHolidays`). Si le contrat actif n'a pas de date de fin (`contractEndDate === null`, contrat permanent), affiche "Indéterminé" plutôt qu'un nombre. Ce champ affichait auparavant `employeed.availableLeaveDays` (le solde de congé, sans rapport avec la durée du contrat) — ne pas réintroduire cette confusion.
 - Les deux dernières entrées d'historique (`history[length-2]` et `history[length-1]`) sont supposées être "Superviseur" puis "Directeur Pays" — cette hypothèse casse si le workflow d'approbation change d'ordre ou de nombre d'étapes (voir [`docs/approvals-workflow/`](../approvals-workflow/INDEX.md)).
 - Aucune protection d'accès sur cette route : quiconque connaît l'`id` Firestore peut consulter/imprimer la demande (pas de vérification d'auth dans `DownloadPage`).
 - Le lien vers cette page apparaît dans `leave-history.tsx` dès que le statut est `Approved` ou `Pending HR` (icône `FileDownIcon`).
