@@ -298,8 +298,31 @@ export function AdminPanel({ leaveRequests, employees, onEmployeesUpdate }: Admi
             // à un contrat déjà présent (ex: renouvellement avec mêmes poste/équipe).
             const existingContracts = employeeDoc.data().contracts || [];
 
+            // Clôture automatiquement l'ancien contrat "en cours" (sans date de fin) s'il
+            // est antérieur au nouveau, pour éviter que deux contrats se chevauchent et que
+            // getCurrentContract() (qui prend le startDate le plus récent) désigne le mauvais
+            // contrat comme actuel. Sans ça, un contrat ouvert plus tôt mais saisi plus tard
+            // (ex: contrat réel rétroactif vs ancien contrat placeholder) peut rester masqué.
+            let latestIndex = -1;
+            existingContracts.forEach((c: any, i: number) => {
+                if (latestIndex === -1 || c.startDate.toMillis() > existingContracts[latestIndex].startDate.toMillis()) {
+                    latestIndex = i;
+                }
+            });
+            let updatedExistingContracts = existingContracts;
+            if (latestIndex !== -1) {
+                const previousCurrent = existingContracts[latestIndex];
+                if (!previousCurrent.endDate && newContract.startDate.getTime() > previousCurrent.startDate.toMillis()) {
+                    const dayBeforeNewContract = new Date(newContract.startDate);
+                    dayBeforeNewContract.setDate(dayBeforeNewContract.getDate() - 1);
+                    updatedExistingContracts = existingContracts.map((c: any, i: number) =>
+                        i === latestIndex ? { ...c, endDate: dayBeforeNewContract } : c
+                    );
+                }
+            }
+
             transaction.update(employeeRef, {
-                contracts: [...existingContracts, newContract],
+                contracts: [...updatedExistingContracts, newContract],
                 availableLeaveDays: updatedLeaveDays
             });
         });
